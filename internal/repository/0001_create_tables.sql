@@ -1,0 +1,17 @@
+-- creating users
+CREATE TABLE IF NOT EXISTS users (
+	id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+	name VARCHAR(50) NOT NULL,
+	email VARCHAR(50) NOT NULL UNIQUE,
+	password VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- creating todos
+CREATE TABLE IF NOT EXISTS todos (
+    user_id INT NOT NULL,
+    id INT NOT NULL,
+    title VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+	PRIMARY KEY(user_id, id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

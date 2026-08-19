@@ -6,17 +6,18 @@ var (
 	ErrUserNotFound = errors.New("user with given email and password not found")
 	ErrTaskNotFound = errors.New("task with given ID not found")
 
-	ErrInvalidID   = errors.New("invalid ID")
-	ErrInvalidJSON = errors.New("invalid JSON")
-	ErrInvalidToken = errors.New("invalid JWT")
+	ErrInvalidID         = errors.New("invalid ID")
+	ErrInvalidJSON       = errors.New("invalid JSON")
+	ErrInvalidToken      = errors.New("invalid JWT")
 	ErrInvalidSignMethod = errors.New("invalid signing method")
+	ErrInvalidURLValue   = errors.New("invalid URL value(s)")
 
 	ErrTokenExpired = errors.New("JWT expired")
 
 	ErrEmailExists = errors.New("given email is already in database")
 
-	ErrEmptyField    = errors.New("empty field in given input")
-	ErrEmptyToken    = errors.New("got empty token")
+	ErrEmptyField = errors.New("empty field in given input")
+	ErrEmptyToken = errors.New("got empty token")
 
 	ErrWrondPassword = errors.New("password from DB and given password don't match")
 )

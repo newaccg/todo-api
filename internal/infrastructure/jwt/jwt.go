@@ -11,19 +11,19 @@ import (
 
 type jwebtoken struct {
 	expirationTime time.Duration
-	secret string
+	secret         string
 }
 
 func NewJWT(JWTExpirationTime time.Duration, JWTSecret string) *jwebtoken {
 	return &jwebtoken{
 		expirationTime: JWTExpirationTime,
-		secret: JWTSecret,
+		secret:         JWTSecret,
 	}
 }
 
 func (j *jwebtoken) GenerateJWT(userId int64) (string, error) {
-	claims := jwt.MapClaims {
-		"exp": time.Now().Add(j.expirationTime).Unix(),
+	claims := jwt.MapClaims{
+		"exp":    time.Now().Add(j.expirationTime).Unix(),
 		"userID": userId,
 	}
 

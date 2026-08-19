@@ -16,6 +16,7 @@ type Service interface {
 	RegisterUser(ctx context.Context, name, email, password string) (string, error)
 	LoginUser(ctx context.Context, email, password string) (string, error)
 	GetAllTasksWithUserID(ctx context.Context, userID int64) ([]model.Task, error)
+	GetPaginatedTasksWithUserID(ctx context.Context, userID int64, page, limit int) ([]model.Task, error)
 	CreateTaskWithUserID(ctx context.Context, title, description string, userId int64) (*model.Task, error)
 	UpdateTaskByIDWithUserID(ctx context.Context, taskID, userId int64, title, description string) (*model.Task, error)
 	DeleteTaskByIDWithUserID(ctx context.Context, taskID, userId int64) error
@@ -31,7 +32,7 @@ type handler struct {
 }
 
 type taskRequest struct {
-	Title string `json:"title"`
+	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
@@ -48,7 +49,7 @@ func (h *handler) RegisterRoutes() *http.ServeMux {
 	mux.HandleFunc("POST /register", Handle(h.Register))
 	mux.HandleFunc("POST /login", Handle(h.Login))
 
-	mux.HandleFunc("GET /todos", Handle(h.midware.Auth(h.GetAllTasks)))
+	mux.HandleFunc("GET /todos", Handle(h.midware.Auth(h.GetPaginatedTasks)))
 	mux.HandleFunc("POST /todos", Handle(h.midware.Auth(h.CreateTask)))
 
 	mux.HandleFunc("PUT /todos/{id}", Handle(h.midware.Auth(h.UpdateTask)))
@@ -59,8 +60,8 @@ func (h *handler) RegisterRoutes() *http.ServeMux {
 
 func (h *handler) Register(w http.ResponseWriter, r *http.Request) error {
 	var input struct {
-		Name string `json:"name"`
-		Email string `json:"email"`
+		Name     string `json:"name"`
+		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
@@ -86,7 +87,7 @@ func (h *handler) Register(w http.ResponseWriter, r *http.Request) error {
 
 func (h *handler) Login(w http.ResponseWriter, r *http.Request) error {
 	var input struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
@@ -122,6 +123,52 @@ func (h *handler) GetAllTasks(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	writeJSON(w, tasks)
+
+	return nil
+}
+
+func (h *handler) GetPaginatedTasks(w http.ResponseWriter, r *http.Request) error {
+	id, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		return err
+	}
+
+	query := r.URL.Query()
+	strPage := query.Get("page")
+	strLimit := query.Get("limit")
+
+	if strPage == "" || strLimit == "" {
+		return h.GetAllTasks(w, r)
+	}
+
+	page, err := strconv.Atoi(strPage)
+	if err != nil || page <= 0 {
+		return errs.ErrInvalidURLValue
+	}
+
+	limit, err := strconv.Atoi(strLimit)
+	if err != nil || limit <= 0 {
+		return errs.ErrInvalidURLValue
+	}
+
+	tasks, err := h.service.GetPaginatedTasksWithUserID(r.Context(), id, page, limit)
+	if err != nil {
+		return err
+	}
+
+	output := struct {
+		Data  []model.Task `json:"data"`
+		Page  int          `json:"page"`
+		Limit int          `json:"limit"`
+		Total int          `json:"total"`
+	}{
+		Data:  tasks,
+		Page:  page,
+		Limit: limit,
+		Total: len(tasks),
+	}
+
+	writeJSON(w, output)
 
 	return nil
 }
@@ -198,6 +245,7 @@ func (h *handler) DeleteTask(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
+
 // structural validation
 func validateInputStrings(input ...string) error {
 	if slices.Contains(input, "") {

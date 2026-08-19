@@ -56,7 +56,6 @@ func (d *Duration) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-
 func LoadConfig(configPath string) (*Config, error) {
 	var config *Config
 

@@ -11,8 +11,7 @@ type crypto struct {
 }
 
 func NewCrypto() *crypto {
-	return &crypto{
-	}
+	return &crypto{}
 }
 
 func (c *crypto) EncryptPassword(password string) ([]byte, error) {

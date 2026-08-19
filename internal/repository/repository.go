@@ -23,13 +23,13 @@ type crypto interface {
 type repository struct {
 	db     *sql.DB
 	config *config.DBConfig
-	crypt crypto
+	crypt  crypto
 }
 
 func NewRepository(config *config.DBConfig, cryp crypto) *repository {
 	return &repository{
 		config: config,
-		crypt: cryp,
+		crypt:  cryp,
 	}
 }
 
@@ -244,7 +244,6 @@ func (r *repository) DeleteByIDWithUserID(ctx context.Context, taskID, userID in
 
 	return tx.Commit()
 }
-
 
 func (r *repository) UpdateByIDWithUserID(ctx context.Context, taskID, userID int64, task *model.Task) (*model.Task, error) {
 	// transaction for rollback

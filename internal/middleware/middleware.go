@@ -16,19 +16,19 @@ type jwebtoken interface {
 }
 
 type middleware struct {
-	jwt jwebtoken
+	jwt        jwebtoken
 	headerName string
 }
 
 func NewMiddleware(hName string, jwt jwebtoken) *middleware {
 	return &middleware{
-		jwt: jwt,
+		jwt:        jwt,
 		headerName: hName,
 	}
 }
 
 func (m *middleware) Auth(next handler.CustomHandler) handler.CustomHandler {
-	return func (w http.ResponseWriter, r *http.Request) error {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		token := r.Header.Get(m.headerName)
 		if token == "" {
 			return errs.ErrEmptyToken

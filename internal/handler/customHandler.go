@@ -38,6 +38,10 @@ func Handle(f func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 				resp.Err = "invalid JSON"
 				resp.Code = http.StatusBadRequest
 
+			case errors.Is(err, errs.ErrInvalidURLValue):
+				resp.Err = "invalid URl value(s)"
+				resp.Code = http.StatusBadRequest
+
 			case errors.Is(err, errs.ErrUserNotFound):
 				resp.Err = "user with given email doesn't exist"
 				resp.Code = http.StatusUnauthorized

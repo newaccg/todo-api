@@ -22,21 +22,20 @@ type JWT interface {
 }
 
 type Service struct {
-	cfg *config.JWT
+	cfg  *config.JWT
 	repo Repository
-	jwt JWT
+	jwt  JWT
 }
 
 func NewService(repo Repository, jwt JWT, conf *config.JWT) *Service {
 	return &Service{
-		cfg: conf,
+		cfg:  conf,
 		repo: repo,
-		jwt: jwt,
+		jwt:  jwt,
 	}
 }
 
 func (s *Service) RegisterUser(ctx context.Context, name, email, password string) (string, error) {
-	// TODO: hash password
 	id, err := s.repo.Register(ctx, name, email, password)
 	if err != nil {
 		return "", err
@@ -63,10 +62,30 @@ func (s *Service) GetAllTasksWithUserID(ctx context.Context, userID int64) ([]mo
 	return tasks, nil
 }
 
+func (s *Service) GetPaginatedTasksWithUserID(ctx context.Context, userID int64, page, limit int) ([]model.Task, error) {
+	tasks, err := s.repo.GetAllWithUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get all tasks: %w", err)
+	}
+
+	startIndex := (page - 1) * limit
+	endIndex := startIndex + limit
+
+	if startIndex > len(tasks) {
+		return make([]model.Task, 0), nil
+	}
+
+	if endIndex > len(tasks) {
+		endIndex = len(tasks) - 1
+	}
+
+	return tasks[startIndex:endIndex], nil
+}
+
 func (s *Service) CreateTaskWithUserID(ctx context.Context, title, description string, id int64) (*model.Task, error) {
 	task := model.Task{
-		Title:    title,
-		Description:     description,
+		Title:       title,
+		Description: description,
 	}
 
 	newTask, err := s.repo.CreateWithUserID(ctx, &task, id)
@@ -79,8 +98,8 @@ func (s *Service) CreateTaskWithUserID(ctx context.Context, title, description s
 
 func (s *Service) UpdateTaskByIDWithUserID(ctx context.Context, taskID, userID int64, title, description string) (*model.Task, error) {
 	task := model.Task{
-		Title:    title,
-		Description:     description,
+		Title:       title,
+		Description: description,
 	}
 
 	newTask, err := s.repo.UpdateByIDWithUserID(ctx, taskID, userID, &task)
@@ -98,5 +117,3 @@ func (s *Service) DeleteTaskByIDWithUserID(ctx context.Context, taskID, userID i
 
 	return nil
 }
-
-

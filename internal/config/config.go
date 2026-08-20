@@ -17,9 +17,21 @@ type Duration struct {
 type Config struct {
 	ServerAddress string `json:"serverAddress"`
 
-	DB DBConfig `json:"database"`
+	DB         DBConfig         `json:"database"`
+	Jwt        JWT              `json:"JWT"`
+	ValueNames ValueNamesConfig `json:"valueNames"`
+}
 
-	Jwt JWT
+type ValueNamesConfig struct {
+	Url ValueNamesURL `json:"URL"`
+
+	JwtUserID string `json:"JWTUserID"`
+}
+
+type ValueNamesURL struct {
+	Page   string `json:"page"`
+	Limit  string `json:"limit"`
+	Filter string `json:"filter"`
 }
 
 type JWT struct {

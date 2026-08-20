@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/newaccg/todo-api/internal/config"
 	errs "github.com/newaccg/todo-api/internal/errors"
 	"github.com/newaccg/todo-api/internal/model"
 )
@@ -29,6 +30,9 @@ type middleware interface {
 }
 
 type handler struct {
+	urlValueNames      *config.ValueNamesURL
+	jwtUserIDValueName string
+
 	service Service
 	midware middleware
 }
@@ -38,10 +42,12 @@ type taskRequest struct {
 	Description string `json:"description"`
 }
 
-func NewHandler(svc Service, mware middleware) *handler {
+func NewHandler(svc Service, mware middleware, urlVals *config.ValueNamesURL, jwtUserIDValueName string) *handler {
 	return &handler{
-		service: svc,
-		midware: mware,
+		service:            svc,
+		midware:            mware,
+		urlValueNames:      urlVals,
+		jwtUserIDValueName: jwtUserIDValueName,
 	}
 }
 
@@ -114,7 +120,7 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) GetTasks(w http.ResponseWriter, r *http.Request) error {
-	id, err := getUserIDFromContext(r.Context())
+	id, err := h.getUserIDFromContext(r.Context())
 	if err != nil {
 		return err
 	}
@@ -122,7 +128,7 @@ func (h *handler) GetTasks(w http.ResponseWriter, r *http.Request) error {
 	var tasks []model.Task
 
 	query := r.URL.Query()
-	filter := query.Get("term")
+	filter := query.Get(h.urlValueNames.Filter)
 	ctx := r.Context()
 
 	if filter == "" { // if filter is specified...
@@ -136,12 +142,12 @@ func (h *handler) GetTasks(w http.ResponseWriter, r *http.Request) error {
 
 	bad := false
 
-	page, err := getIntFromURLQuery(query, "page")
+	page, err := getIntFromURLQuery(query, h.urlValueNames.Page)
 	if err != nil {
 		bad = true
 	}
 
-	limit, err := getIntFromURLQuery(query, "limit")
+	limit, err := getIntFromURLQuery(query, h.urlValueNames.Limit)
 	if err != nil {
 		bad = true
 	}
@@ -183,7 +189,7 @@ func (h *handler) CreateTask(w http.ResponseWriter, r *http.Request) error {
 
 	ctx := r.Context()
 
-	id, err := getUserIDFromContext(ctx)
+	id, err := h.getUserIDFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -211,7 +217,7 @@ func (h *handler) UpdateTask(w http.ResponseWriter, r *http.Request) error {
 
 	ctx := r.Context()
 
-	userID, err := getUserIDFromContext(ctx)
+	userID, err := h.getUserIDFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -233,7 +239,7 @@ func (h *handler) DeleteTask(w http.ResponseWriter, r *http.Request) error {
 
 	ctx := r.Context()
 
-	userID, err := getUserIDFromContext(ctx)
+	userID, err := h.getUserIDFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -256,10 +262,10 @@ func validateInputStrings(input ...string) error {
 	return nil
 }
 
-func getUserIDFromContext(ctx context.Context) (int64, error) {
+func (h *handler) getUserIDFromContext(ctx context.Context) (int64, error) {
 	// we cannot convert directly to int64 because jwt.MapClaims converts all numeric values to float64
 	// so we have to do this intermediate step
-	floatID, ok := ctx.Value("userID").(float64)
+	floatID, ok := ctx.Value(h.jwtUserIDValueName).(float64)
 	if !ok {
 		return 0, errors.New("could not convert ID from context to float64")
 	}

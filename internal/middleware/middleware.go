@@ -16,14 +16,16 @@ type jwebtoken interface {
 }
 
 type middleware struct {
-	jwt        jwebtoken
-	headerName string
+	jwtUserIDValueName string
+	jwt                jwebtoken
+	headerName         string
 }
 
-func NewMiddleware(hName string, jwt jwebtoken) *middleware {
+func NewMiddleware(hName string, jwt jwebtoken, jwtUserIDValueName string) *middleware {
 	return &middleware{
-		jwt:        jwt,
-		headerName: hName,
+		jwt:                jwt,
+		headerName:         hName,
+		jwtUserIDValueName: jwtUserIDValueName,
 	}
 }
 
@@ -39,7 +41,7 @@ func (m *middleware) Auth(next handler.CustomHandler) handler.CustomHandler {
 			return fmt.Errorf("could not process token \"%s\": %w", token, err)
 		}
 
-		ctx := context.WithValue(r.Context(), "userID", claims["userID"])
+		ctx := context.WithValue(r.Context(), m.jwtUserIDValueName, claims[m.jwtUserIDValueName])
 
 		return next(w, r.WithContext(ctx))
 	}

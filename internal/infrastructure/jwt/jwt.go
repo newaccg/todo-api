@@ -10,21 +10,23 @@ import (
 )
 
 type jwebtoken struct {
-	expirationTime time.Duration
-	secret         string
+	expirationTime     time.Duration
+	secret             string
+	jwtUserIDValueName string
 }
 
-func NewJWT(JWTExpirationTime time.Duration, JWTSecret string) *jwebtoken {
+func NewJWT(JWTExpirationTime time.Duration, JWTSecret, jwtUserIDValueName string) *jwebtoken {
 	return &jwebtoken{
-		expirationTime: JWTExpirationTime,
-		secret:         JWTSecret,
+		expirationTime:     JWTExpirationTime,
+		secret:             JWTSecret,
+		jwtUserIDValueName: jwtUserIDValueName,
 	}
 }
 
 func (j *jwebtoken) GenerateJWT(userId int64) (string, error) {
 	claims := jwt.MapClaims{
-		"exp":    time.Now().Add(j.expirationTime).Unix(),
-		"userID": userId,
+		"exp":                time.Now().Add(j.expirationTime).Unix(),
+		j.jwtUserIDValueName: userId,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

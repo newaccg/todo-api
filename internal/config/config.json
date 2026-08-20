@@ -6,6 +6,16 @@
 		"expirationTime": "15m"
 	},
 
+	"valueNames": {
+		"URL": {
+			"page": "page",
+			"limit": "limit",
+			"filter": "term"
+		},
+
+		"JWTUserID": "userID"
+	},
+
 	"database": {
 		"pathToSQLSrcipts": "internal/repository/",
 		"address": "localhost:3306",

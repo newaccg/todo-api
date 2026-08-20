@@ -16,6 +16,16 @@
 		"JWTUserID": "userID"
 	},
 
+	"rateLimiting": {
+		"refillPerSecond": 1,
+		"refreshDuration": "3m",
+		"bucketSizes": {
+			"todos": 5,
+			"register": 2,
+			"login": 5
+		}
+	},
+
 	"database": {
 		"pathToSQLSrcipts": "internal/repository/",
 		"address": "localhost:3306",

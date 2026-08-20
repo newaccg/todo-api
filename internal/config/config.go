@@ -17,15 +17,28 @@ type Duration struct {
 type Config struct {
 	ServerAddress string `json:"serverAddress"`
 
-	DB         DBConfig         `json:"database"`
-	Jwt        JWT              `json:"JWT"`
-	ValueNames ValueNamesConfig `json:"valueNames"`
+	DB           DBConfig           `json:"database"`
+	Jwt          JWT                `json:"JWT"`
+	ValueNames   ValueNamesConfig   `json:"valueNames"`
+	RateLimiting RateLimitingConfig `json:"rateLimiting"`
 }
 
 type ValueNamesConfig struct {
 	Url ValueNamesURL `json:"URL"`
 
 	JwtUserID string `json:"JWTUserID"`
+}
+
+type RateLimitingConfig struct {
+	RefillPerSecond int               `json:"refillPerSecond"`
+	RefreshDuration Duration          `json:"refreshDuration"`
+	BucketSizes     BucketSizesConfig `json:"bucketSizes"`
+}
+
+type BucketSizesConfig struct {
+	Todos    int `json:"todos"`
+	Register int `json:"register"`
+	Login    int `json:"login"`
 }
 
 type ValueNamesURL struct {

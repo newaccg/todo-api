@@ -27,11 +27,13 @@ type Service interface {
 
 type middleware interface {
 	Auth(CustomHandler) CustomHandler
+	RateLimit(next CustomHandler, bucketSize int) CustomHandler
 }
 
 type handler struct {
 	urlValueNames      *config.ValueNamesURL
 	jwtUserIDValueName string
+	bucketSizes        *config.BucketSizesConfig
 
 	service Service
 	midware middleware
@@ -42,26 +44,40 @@ type taskRequest struct {
 	Description string `json:"description"`
 }
 
-func NewHandler(svc Service, mware middleware, urlVals *config.ValueNamesURL, jwtUserIDValueName string) *handler {
+func NewHandler(svc Service, mware middleware, urlVals *config.ValueNamesURL, jwtUserIDValueName string, sizes *config.BucketSizesConfig) *handler {
 	return &handler{
 		service:            svc,
 		midware:            mware,
 		urlValueNames:      urlVals,
 		jwtUserIDValueName: jwtUserIDValueName,
+		bucketSizes:        sizes,
 	}
 }
 
 func (h *handler) RegisterRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /register", Handle(h.Register))
-	mux.HandleFunc("POST /login", Handle(h.Login))
+	hdr := h.midware.RateLimit(h.Register, h.bucketSizes.Register)
+	mux.HandleFunc("POST /register", Handle(hdr))
 
-	mux.HandleFunc("GET /todos", Handle(h.midware.Auth(h.GetTasks)))
-	mux.HandleFunc("POST /todos", Handle(h.midware.Auth(h.CreateTask)))
+	hdr = h.midware.RateLimit(h.Login, h.bucketSizes.Login)
+	mux.HandleFunc("POST /login", Handle(hdr))
 
-	mux.HandleFunc("PUT /todos/{id}", Handle(h.midware.Auth(h.UpdateTask)))
-	mux.HandleFunc("DELETE /todos/{id}", Handle(h.midware.Auth(h.DeleteTask)))
+	hdr = h.midware.RateLimit(h.GetTasks, h.bucketSizes.Todos)
+	hdr = h.midware.Auth(hdr)
+	mux.HandleFunc("GET /todos", Handle(hdr))
+
+	hdr = h.midware.RateLimit(h.CreateTask, h.bucketSizes.Todos)
+	hdr = h.midware.Auth(hdr)
+	mux.HandleFunc("POST /todos", Handle(hdr))
+
+	hdr = h.midware.RateLimit(h.UpdateTask, h.bucketSizes.Todos)
+	hdr = h.midware.Auth(hdr)
+	mux.HandleFunc("PUT /todos/{id}", Handle(hdr))
+
+	hdr = h.midware.RateLimit(h.DeleteTask, h.bucketSizes.Todos)
+	hdr = h.midware.Auth(hdr)
+	mux.HandleFunc("DELETE /todos/{id}", Handle(hdr))
 
 	return mux
 }

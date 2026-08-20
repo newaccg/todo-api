@@ -12,6 +12,7 @@ type Repository interface {
 	Register(ctx context.Context, name, email, password string) (int64, error)
 	Login(ctx context.Context, email, password string) (int64, error)
 	GetAllWithUserID(ctx context.Context, userID int64) ([]model.Task, error)
+	GetByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error)
 	CreateWithUserID(ctx context.Context, task *model.Task, id int64) (*model.Task, error)
 	UpdateByIDWithUserID(ctx context.Context, taskID, userID int64, task *model.Task) (*model.Task, error)
 	DeleteByIDWithUserID(ctx context.Context, taskID, userID int64) error
@@ -62,12 +63,16 @@ func (s *Service) GetAllTasksWithUserID(ctx context.Context, userID int64) ([]mo
 	return tasks, nil
 }
 
-func (s *Service) GetPaginatedTasksWithUserID(ctx context.Context, userID int64, page, limit int) ([]model.Task, error) {
-	tasks, err := s.repo.GetAllWithUserID(ctx, userID)
+func (s *Service) GetTasksByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error) {
+	tasks, err := s.repo.GetByFilterWithUserID(ctx, userID, filter)
 	if err != nil {
-		return nil, fmt.Errorf("could not get all tasks: %w", err)
+		return nil, fmt.Errorf("could not get tasks by filter %s: %w", filter, err)
 	}
 
+	return tasks, nil
+}
+
+func (s *Service) PaginateTasks(tasks []model.Task, page, limit int) ([]model.Task, error) {
 	startIndex := (page - 1) * limit
 	endIndex := startIndex + limit
 
@@ -76,7 +81,7 @@ func (s *Service) GetPaginatedTasksWithUserID(ctx context.Context, userID int64,
 	}
 
 	if endIndex > len(tasks) {
-		endIndex = len(tasks) - 1
+		endIndex = len(tasks) // removed the " - 1" at the end
 	}
 
 	return tasks[startIndex:endIndex], nil

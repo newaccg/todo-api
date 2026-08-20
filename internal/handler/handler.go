@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 
@@ -16,7 +17,8 @@ type Service interface {
 	RegisterUser(ctx context.Context, name, email, password string) (string, error)
 	LoginUser(ctx context.Context, email, password string) (string, error)
 	GetAllTasksWithUserID(ctx context.Context, userID int64) ([]model.Task, error)
-	GetPaginatedTasksWithUserID(ctx context.Context, userID int64, page, limit int) ([]model.Task, error)
+	GetTasksByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error)
+	PaginateTasks(tasks []model.Task, page, limit int) ([]model.Task, error)
 	CreateTaskWithUserID(ctx context.Context, title, description string, userId int64) (*model.Task, error)
 	UpdateTaskByIDWithUserID(ctx context.Context, taskID, userId int64, title, description string) (*model.Task, error)
 	DeleteTaskByIDWithUserID(ctx context.Context, taskID, userId int64) error
@@ -49,7 +51,7 @@ func (h *handler) RegisterRoutes() *http.ServeMux {
 	mux.HandleFunc("POST /register", Handle(h.Register))
 	mux.HandleFunc("POST /login", Handle(h.Login))
 
-	mux.HandleFunc("GET /todos", Handle(h.midware.Auth(h.GetPaginatedTasks)))
+	mux.HandleFunc("GET /todos", Handle(h.midware.Auth(h.GetTasks)))
 	mux.HandleFunc("POST /todos", Handle(h.midware.Auth(h.CreateTask)))
 
 	mux.HandleFunc("PUT /todos/{id}", Handle(h.midware.Auth(h.UpdateTask)))
@@ -111,64 +113,63 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *handler) GetAllTasks(w http.ResponseWriter, r *http.Request) error {
+func (h *handler) GetTasks(w http.ResponseWriter, r *http.Request) error {
 	id, err := getUserIDFromContext(r.Context())
 	if err != nil {
 		return err
 	}
 
-	tasks, err := h.service.GetAllTasksWithUserID(r.Context(), id)
-	if err != nil {
-		return err
-	}
-
-	writeJSON(w, tasks)
-
-	return nil
-}
-
-func (h *handler) GetPaginatedTasks(w http.ResponseWriter, r *http.Request) error {
-	id, err := getUserIDFromContext(r.Context())
-	if err != nil {
-		return err
-	}
+	var tasks []model.Task
 
 	query := r.URL.Query()
-	strPage := query.Get("page")
-	strLimit := query.Get("limit")
+	filter := query.Get("term")
+	ctx := r.Context()
 
-	if strPage == "" || strLimit == "" {
-		return h.GetAllTasks(w, r)
+	if filter == "" { // if filter is specified...
+		tasks, err = h.service.GetAllTasksWithUserID(ctx, id)
+	} else {
+		tasks, err = h.service.GetTasksByFilterWithUserID(ctx, id, filter)
 	}
-
-	page, err := strconv.Atoi(strPage)
-	if err != nil || page <= 0 {
-		return errs.ErrInvalidURLValue
-	}
-
-	limit, err := strconv.Atoi(strLimit)
-	if err != nil || limit <= 0 {
-		return errs.ErrInvalidURLValue
-	}
-
-	tasks, err := h.service.GetPaginatedTasksWithUserID(r.Context(), id, page, limit)
 	if err != nil {
 		return err
 	}
 
-	output := struct {
-		Data  []model.Task `json:"data"`
-		Page  int          `json:"page"`
-		Limit int          `json:"limit"`
-		Total int          `json:"total"`
-	}{
-		Data:  tasks,
-		Page:  page,
-		Limit: limit,
-		Total: len(tasks),
+	bad := false
+
+	page, err := getIntFromURLQuery(query, "page")
+	if err != nil {
+		bad = true
 	}
 
-	writeJSON(w, output)
+	limit, err := getIntFromURLQuery(query, "limit")
+	if err != nil {
+		bad = true
+	}
+
+	if !bad { // if page or limit values are not invalid...
+		// return paginated tasks
+		tasks, err = h.service.PaginateTasks(tasks, page, limit)
+		if err != nil {
+			return err
+		}
+
+		output := struct {
+			Data  []model.Task `json:"data"`
+			Page  int          `json:"page"`
+			Limit int          `json:"limit"`
+			Total int          `json:"total"`
+		}{
+			Data:  tasks,
+			Page:  page,
+			Limit: limit,
+			Total: len(tasks),
+		}
+
+		writeJSON(w, output)
+	} else {
+		// return common tasks
+		writeJSON(w, tasks)
+	}
 
 	return nil
 }
@@ -283,6 +284,16 @@ func getIDFromRequest(r *http.Request) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func getIntFromURLQuery(query url.Values, value string) (int, error) {
+	str := query.Get(value)
+	res, err := strconv.Atoi(str)
+	if err != nil || res <= 0 {
+		return 0, errs.ErrInvalidURLValue
+	}
+
+	return res, nil
 }
 
 func writeJSON(w http.ResponseWriter, msg any) {

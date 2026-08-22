@@ -3,7 +3,8 @@
 
 	"JWT": {
 		"headerName": "Authorization",
-		"expirationTime": "15m"
+		"accessTokenExpirationTime": "15m",
+		"refreshTokenExpirationTime": "90m"
 	},
 
 	"valueNames": {

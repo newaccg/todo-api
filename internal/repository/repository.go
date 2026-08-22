@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 
@@ -16,8 +18,9 @@ import (
 )
 
 type crypto interface {
-	EncryptPassword(password string) ([]byte, error)
-	ArePasswordAndHashEqual(password string, hash string) (bool, error)
+	EncryptPassword(str string) (string, error)
+	ArePasswordAndHashEqual(str string, hash string) (bool, error)
+	StringToSha256(str string) string
 }
 
 type repository struct {
@@ -77,13 +80,27 @@ func (r *repository) LoadDB() error {
 		return err
 	}
 
+	// check status of the event scheduler
+	var status string
+	err = db.QueryRow("SELECT @@global.event_scheduler").Scan(&status)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if status != "ON" {
+		return errors.New("event_scheduler is not set to ON. If you use Linux, please set event_scheduler=ON in the [mysqld] section in mysql configuration file")
+	}
+
 	r.db = db
 	return nil
 }
 
 func (r *repository) UnloadDB() {
 	if err := r.db.Close(); err != nil {
-		log.Println("ERROR: could not unload DB:", err)
+		slog.Error(
+			"could not unload DB:",
+			"error", err,
+		)
 	}
 }
 
@@ -118,12 +135,12 @@ func (r *repository) Register(ctx context.Context, name, email, password string)
 		return 0, err
 	}
 
-	if err := tx.Commit(); err != nil {
+	id, err := res.LastInsertId()
+	if err != nil {
 		return 0, err
 	}
 
-	id, err := res.LastInsertId()
-	if err != nil {
+	if err := tx.Commit(); err != nil {
 		return 0, err
 	}
 
@@ -196,7 +213,6 @@ func (r *repository) CreateWithUserID(ctx context.Context, task *model.Task, use
 	}
 
 	task.ID = id
-	log.Println(id)
 
 	return task, nil
 }
@@ -263,7 +279,6 @@ func (r *repository) UpdateByIDWithUserID(ctx context.Context, taskID, userID in
 	}
 
 	updatedCount, err := res.RowsAffected()
-	log.Println(updatedCount)
 	if err != nil {
 		return nil, err
 	}
@@ -281,6 +296,102 @@ func (r *repository) UpdateByIDWithUserID(ctx context.Context, taskID, userID in
 	}
 
 	return task, nil
+}
+
+func (r *repository) UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken string) error {
+	err := r.validateRefreshToken(ctx, userID, oldToken)
+	if err != nil {
+		return err
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	oldHash := r.crypt.StringToSha256(oldToken)
+	newHash := r.crypt.StringToSha256(newToken)
+
+	_, err = tx.ExecContext(ctx,
+		"UPDATE refresh_tokens SET token_hash = ? WHERE user_id = ? AND token_hash = ?",
+		newHash,
+		userID,
+		oldHash,
+	)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (r *repository) InsertRefreshToken(ctx context.Context, refreshToken string, userID, expiresAt int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	hash := r.crypt.StringToSha256(refreshToken)
+
+	_, err = tx.ExecContext(ctx,
+		"INSERT INTO refresh_tokens (user_id, expires_at, token_hash) VALUES (?, ?, ?)",
+		userID,
+		expiresAt,
+		string(hash),
+	)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (r *repository) validateRefreshToken(ctx context.Context, userID int64, token string) error {
+	var exp int64
+	hash := r.crypt.StringToSha256(token)
+
+	row := r.db.QueryRowContext(ctx,
+		"SELECT expires_at FROM refresh_tokens WHERE user_id = ? AND token_hash = ?",
+		userID,
+		hash,
+	)
+
+	err := row.Scan(&exp)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errs.ErrInvalidToken
+		}
+
+		return err
+	}
+
+	if time.Now().Unix() > exp {
+		r.deleteRefreshToken(ctx, userID, token)
+		return errs.ErrTokenExpired
+	}
+
+	return nil
+}
+
+func (r *repository) deleteRefreshToken(ctx context.Context, userID int64, token string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx,
+		"DELETE FROM refresh_tokens WHERE user_id = ? AND token_hash = ?",
+		userID,
+		token,
+	)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *repository) getByQuery(ctx context.Context, query string, args ...any) ([]model.Task, error) {

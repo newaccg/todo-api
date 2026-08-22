@@ -1,10 +1,11 @@
 package crypto
 
 import (
-	"errors"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
-	"golang.org/x/crypto/bcrypt"
+	"github.com/alexedwards/argon2id"
 )
 
 type crypto struct {
@@ -14,24 +15,22 @@ func NewCrypto() *crypto {
 	return &crypto{}
 }
 
-func (c *crypto) EncryptPassword(password string) ([]byte, error) {
-	res, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+func (c *crypto) EncryptPassword(password string) (string, error) {
+	res, err := argon2id.CreateHash(password, argon2id.DefaultParams)
 	if err != nil {
-		return nil, fmt.Errorf("could not encrypt password: %w", err)
+		return "", fmt.Errorf("could not encrypt password: %w", err)
 	}
 
 	return res, nil
 }
 
 func (c *crypto) ArePasswordAndHashEqual(password string, hash string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	if err != nil {
-		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			return false, nil
-		}
+	return argon2id.ComparePasswordAndHash(password, hash)
+}
 
-		return false, fmt.Errorf("could not compare password and hash: %w", err)
-	}
+func (c *crypto) StringToSha256(str string) string {
+	sum := sha256.Sum256([]byte(str))
+	hex := hex.EncodeToString(sum[:]) // convert to hex because raw sha256 includes binary data
 
-	return true, nil
+	return hex
 }

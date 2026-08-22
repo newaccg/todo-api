@@ -7,33 +7,35 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	errs "github.com/newaccg/todo-api/internal/errors"
+	"github.com/newaccg/todo-api/internal/model"
 )
 
 type jwebtoken struct {
-	expirationTime     time.Duration
+	accessTokenExpirationTime  time.Duration
+	refreshTokenExpirationTime time.Duration
+
 	secret             string
 	jwtUserIDValueName string
 }
 
-func NewJWT(JWTExpirationTime time.Duration, JWTSecret, jwtUserIDValueName string) *jwebtoken {
+func NewJWT(accessExpirationTime, refreshExpirationTime time.Duration, JWTSecret, jwtUserIDValueName string) *jwebtoken {
 	return &jwebtoken{
-		expirationTime:     JWTExpirationTime,
-		secret:             JWTSecret,
-		jwtUserIDValueName: jwtUserIDValueName,
+		accessTokenExpirationTime:  accessExpirationTime,
+		refreshTokenExpirationTime: refreshExpirationTime,
+		secret:                     JWTSecret,
+		jwtUserIDValueName:         jwtUserIDValueName,
 	}
 }
 
-func (j *jwebtoken) GenerateJWT(userId int64) (string, error) {
-	claims := jwt.MapClaims{
-		"exp":                time.Now().Add(j.expirationTime).Unix(),
-		j.jwtUserIDValueName: userId,
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(j.secret))
+func (j *jwebtoken) GenerateAccessToken(userID int64) (*model.Token, error) {
+	return j.generateJWT(userID, j.accessTokenExpirationTime)
 }
 
-func (j *jwebtoken) ValidateAndGetClaimsFromJWT(token string) (jwt.MapClaims, error) {
+func (j *jwebtoken) GenerateRefreshToken(userID int64) (*model.Token, error) {
+	return j.generateJWT(userID, j.refreshTokenExpirationTime)
+}
+
+func (j *jwebtoken) ValidateAndGetClaimsFromJWT(token string) (*model.Claims, error) {
 	parsed, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errs.ErrInvalidSignMethod
@@ -49,12 +51,58 @@ func (j *jwebtoken) ValidateAndGetClaimsFromJWT(token string) (jwt.MapClaims, er
 	}
 
 	if claims, ok := parsed.Claims.(jwt.MapClaims); ok && parsed.Valid {
-		if float64(time.Now().Unix()) > claims["exp"].(float64) {
+		customClaims := &model.Claims{}
+
+		customClaims.UserID, err = claimValueToInt64(claims[j.jwtUserIDValueName])
+		if err != nil {
+			return nil, err
+		}
+
+		customClaims.ExpirationTime, err = claimValueToInt64(claims["exp"])
+		if err != nil {
+			return nil, err
+		}
+
+		if time.Now().Unix() > customClaims.ExpirationTime {
 			return nil, errs.ErrTokenExpired
 		}
 
-		return claims, nil
+		return customClaims, nil
 	}
 
 	return nil, errs.ErrInvalidToken
+}
+
+func (j *jwebtoken) generateJWT(userID int64, dur time.Duration) (*model.Token, error) {
+	exp := time.Now().Add(dur).UTC().Unix()
+	claims := jwt.MapClaims{
+		"exp":                exp,
+		j.jwtUserIDValueName: userID,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	resultToken, err := token.SignedString([]byte(j.secret))
+	if err != nil {
+		return nil, err
+	}
+
+	res := &model.Token{
+		Token:          resultToken,
+		ExpirationTime: exp,
+	}
+
+	return res, nil
+}
+
+func claimValueToInt64(val any) (int64, error) {
+	// we cannot convert directly to int64 because jwt.MapClaims converts all numeric values to float64
+	// so we have to do this intermediate step
+	floatVal, ok := val.(float64)
+	if !ok {
+		return 0, errors.New("could not convert ID from JWT float64")
+	}
+
+	// this is guaranteed to be converted from float64 to int64
+	// so we don't have to check for success
+	return int64(floatVal), nil
 }

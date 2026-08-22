@@ -15,13 +15,14 @@ import (
 )
 
 type Service interface {
-	RegisterUser(ctx context.Context, name, email, password string) (string, error)
-	LoginUser(ctx context.Context, email, password string) (string, error)
+	RegisterUser(ctx context.Context, name, email, password string) (*model.TokenPair, error)
+	LoginUser(ctx context.Context, email, password string) (*model.TokenPair, error)
 	GetAllTasksWithUserID(ctx context.Context, userID int64) ([]model.Task, error)
 	GetTasksByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error)
 	PaginateTasks(tasks []model.Task, page, limit int) ([]model.Task, error)
 	CreateTaskWithUserID(ctx context.Context, title, description string, userId int64) (*model.Task, error)
 	UpdateTaskByIDWithUserID(ctx context.Context, taskID, userId int64, title, description string) (*model.Task, error)
+	UpdateRefreshToken(ctx context.Context, oldToken string) (*model.TokenPair, error)
 	DeleteTaskByIDWithUserID(ctx context.Context, taskID, userId int64) error
 }
 
@@ -63,6 +64,9 @@ func (h *handler) RegisterRoutes() *http.ServeMux {
 	hdr = h.midware.RateLimit(h.Login, h.bucketSizes.Login)
 	mux.HandleFunc("POST /login", Handle(hdr))
 
+	hdr = h.midware.RateLimit(h.Refresh, h.bucketSizes.Todos)
+	mux.HandleFunc("POST /refresh", Handle(hdr))
+
 	hdr = h.midware.RateLimit(h.GetTasks, h.bucketSizes.Todos)
 	hdr = h.midware.Auth(hdr)
 	mux.HandleFunc("GET /todos", Handle(hdr))
@@ -97,14 +101,12 @@ func (h *handler) Register(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	token, err := h.service.RegisterUser(r.Context(), input.Name, input.Email, input.Password)
+	tokens, err := h.service.RegisterUser(r.Context(), input.Name, input.Email, input.Password)
 	if err != nil {
 		return err
 	}
 
-	if err := writeToken(w, token); err != nil {
-		return err
-	}
+	writeJSON(w, tokens)
 
 	return nil
 }
@@ -123,14 +125,12 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	token, err := h.service.LoginUser(r.Context(), input.Email, input.Password)
+	tokens, err := h.service.LoginUser(r.Context(), input.Email, input.Password)
 	if err != nil {
 		return err
 	}
 
-	if err := writeToken(w, token); err != nil {
-		return err
-	}
+	writeJSON(w, tokens)
 
 	return nil
 }
@@ -247,6 +247,31 @@ func (h *handler) UpdateTask(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func (h *handler) Refresh(w http.ResponseWriter, r *http.Request) error {
+	var input struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		return errs.ErrInvalidJSON
+	}
+
+	if input.RefreshToken == "" {
+		return errs.ErrEmptyToken
+	}
+
+	ctx := r.Context()
+
+	tokens, err := h.service.UpdateRefreshToken(ctx, input.RefreshToken)
+	if err != nil {
+		return err
+	}
+
+	writeJSON(w, tokens)
+
+	return nil
+}
+
 func (h *handler) DeleteTask(w http.ResponseWriter, r *http.Request) error {
 	taskID, err := getIDFromRequest(r)
 	if err != nil {
@@ -279,16 +304,10 @@ func validateInputStrings(input ...string) error {
 }
 
 func (h *handler) getUserIDFromContext(ctx context.Context) (int64, error) {
-	// we cannot convert directly to int64 because jwt.MapClaims converts all numeric values to float64
-	// so we have to do this intermediate step
-	floatID, ok := ctx.Value(h.jwtUserIDValueName).(float64)
+	id, ok := ctx.Value(h.jwtUserIDValueName).(int64)
 	if !ok {
-		return 0, errors.New("could not convert ID from context to float64")
+		return 0, errors.New("invalid JWT user ID value: could not convert to int64")
 	}
-
-	// this is guaranteed to be converted from float64 to int64
-	// so we don't have to check for success
-	id := int64(floatID)
 
 	return id, nil
 }
@@ -320,17 +339,4 @@ func getIntFromURLQuery(query url.Values, value string) (int, error) {
 
 func writeJSON(w http.ResponseWriter, msg any) {
 	writeJSONWithCode(w, msg, http.StatusOK)
-}
-
-func writeToken(w http.ResponseWriter, token string) error {
-	var output struct {
-		Token string `json:"token"`
-	}
-	output.Token = token
-
-	if err := json.NewEncoder(w).Encode(&output); err != nil {
-		return err
-	}
-
-	return nil
 }

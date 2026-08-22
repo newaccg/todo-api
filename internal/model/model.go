@@ -12,3 +12,18 @@ type Task struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
+
+type TokenPair struct {
+	RefreshToken Token `json:"refreshToken"`
+	AccessToken  Token `json:"accessToken"`
+}
+
+type Token struct {
+	Token          string
+	ExpirationTime int64 // UNIX time
+}
+
+type Claims struct {
+	ExpirationTime int64 // UNIX time
+	UserID         int64
+}

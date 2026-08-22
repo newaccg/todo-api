@@ -50,7 +50,8 @@ type ValueNamesURL struct {
 type JWT struct {
 	Secret string
 
-	ExpirationTime Duration `json:"expirationTime"`
+	AccessExpirationTime  Duration `json:"accessTokenExpirationTime"`
+	RefreshExpirationTime Duration `json:"refreshTokenExpirationTime"`
 
 	HeaderName string `json:"headerName"`
 }

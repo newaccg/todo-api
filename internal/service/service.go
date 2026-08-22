@@ -15,11 +15,15 @@ type Repository interface {
 	GetByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error)
 	CreateWithUserID(ctx context.Context, task *model.Task, id int64) (*model.Task, error)
 	UpdateByIDWithUserID(ctx context.Context, taskID, userID int64, task *model.Task) (*model.Task, error)
+	UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken string) error
 	DeleteByIDWithUserID(ctx context.Context, taskID, userID int64) error
+	InsertRefreshToken(ctx context.Context, refreshToken string, userID, expiresAt int64) error
 }
 
 type JWT interface {
-	GenerateJWT(id int64) (string, error)
+	GenerateAccessToken(userID int64) (*model.Token, error)
+	GenerateRefreshToken(userID int64) (*model.Token, error)
+	ValidateAndGetClaimsFromJWT(token string) (*model.Claims, error)
 }
 
 type Service struct {
@@ -36,22 +40,22 @@ func NewService(repo Repository, jwt JWT, conf *config.JWT) *Service {
 	}
 }
 
-func (s *Service) RegisterUser(ctx context.Context, name, email, password string) (string, error) {
+func (s *Service) RegisterUser(ctx context.Context, name, email, password string) (*model.TokenPair, error) {
 	id, err := s.repo.Register(ctx, name, email, password)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return s.jwt.GenerateJWT(id)
+	return s.generateAndInsertTokens(ctx, id)
 }
 
-func (s *Service) LoginUser(ctx context.Context, email, password string) (string, error) {
+func (s *Service) LoginUser(ctx context.Context, email, password string) (*model.TokenPair, error) {
 	id, err := s.repo.Login(ctx, email, password)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return s.jwt.GenerateJWT(id)
+	return s.generateAndInsertTokens(ctx, id)
 }
 
 func (s *Service) GetAllTasksWithUserID(ctx context.Context, userID int64) ([]model.Task, error) {
@@ -115,10 +119,63 @@ func (s *Service) UpdateTaskByIDWithUserID(ctx context.Context, taskID, userID i
 	return newTask, nil
 }
 
+func (s *Service) UpdateRefreshToken(ctx context.Context, oldToken string) (*model.TokenPair, error) {
+	claims, err := s.jwt.ValidateAndGetClaimsFromJWT(oldToken)
+	if err != nil {
+		return nil, err
+	}
+	userID := claims.UserID
+
+	newTokens, err := s.generateTokenPair(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repo.UpdateRefreshToken(ctx, userID, oldToken, newTokens.RefreshToken.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	return newTokens, nil
+}
+
 func (s *Service) DeleteTaskByIDWithUserID(ctx context.Context, taskID, userID int64) error {
 	if err := s.repo.DeleteByIDWithUserID(ctx, taskID, userID); err != nil {
 		return fmt.Errorf("could not delete task by task ID %d and user ID %d: %w", taskID, userID, err)
 	}
 
 	return nil
+}
+
+func (s *Service) generateAndInsertTokens(ctx context.Context, userID int64) (*model.TokenPair, error) {
+	tokens, err := s.generateTokenPair(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repo.InsertRefreshToken(ctx, tokens.RefreshToken.Token, userID, tokens.RefreshToken.ExpirationTime)
+	if err != nil {
+		return nil, err
+	}
+
+	return tokens, nil
+}
+
+func (s *Service) generateTokenPair(userID int64) (*model.TokenPair, error) {
+	access, err := s.jwt.GenerateAccessToken(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	refresh, err := s.jwt.GenerateRefreshToken(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	pair := &model.TokenPair{
+		AccessToken:  *access,
+		RefreshToken: *refresh,
+	}
+
+	return pair, nil
 }

@@ -8,15 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/time/rate"
 
 	errs "github.com/newaccg/todo-api/internal/errors"
 	"github.com/newaccg/todo-api/internal/handler"
+	"github.com/newaccg/todo-api/internal/model"
 )
 
 type jwebtoken interface {
-	ValidateAndGetClaimsFromJWT(token string) (jwt.MapClaims, error)
+	ValidateAndGetClaimsFromJWT(token string) (*model.Claims, error)
 }
 
 type middleware struct {
@@ -63,7 +63,7 @@ func (m *middleware) Auth(next handler.CustomHandler) handler.CustomHandler {
 			return fmt.Errorf("could not process token \"%s\": %w", token, err)
 		}
 
-		ctx := context.WithValue(r.Context(), m.jwtUserIDValueName, claims[m.jwtUserIDValueName])
+		ctx := context.WithValue(r.Context(), m.jwtUserIDValueName, claims.UserID)
 
 		return next(w, r.WithContext(ctx))
 	}

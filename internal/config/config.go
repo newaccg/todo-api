@@ -15,7 +15,7 @@ type Duration struct {
 }
 
 type Config struct {
-	ServerAddress string `json:"serverAddress"`
+	ServerAddress string
 
 	DB           DBConfig           `json:"database"`
 	Jwt          JWT                `json:"JWT"`
@@ -59,9 +59,9 @@ type JWT struct {
 type DBConfig struct {
 	Password string
 	User     string
+	Address          string
+	Name             string
 
-	Address          string `json:"address"`
-	Name             string `json:"name"`
 	PathToSQLScripts string `json:"pathToSQLSrcipts"`
 }
 
@@ -103,7 +103,22 @@ func LoadConfig(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("could not parse config.json: %w", err)
 	}
 
+	config.ServerAddress, err = mustGetenv("SERVER_ADDRESS")
+	if err != nil {
+		return nil, err
+	}
+
 	config.DB.User, err = mustGetenv("DB_USER")
+	if err != nil {
+		return nil, err
+	}
+
+	config.DB.Address, err = mustGetenv("DB_ADDRESS")
+	if err != nil {
+		return nil, err
+	}
+
+	config.DB.Name, err = mustGetenv("DB_NAME")
 	if err != nil {
 		return nil, err
 	}

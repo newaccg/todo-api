@@ -1,6 +1,4 @@
 {
-	"serverAddress": "localhost:8080",
-
 	"JWT": {
 		"headerName": "Authorization",
 		"accessTokenExpirationTime": "15m",
@@ -28,8 +26,6 @@
 	},
 
 	"database": {
-		"pathToSQLSrcipts": "internal/repository/",
-		"address": "localhost:3306",
-		"name": "todos"
+		"pathToSQLSrcipts": "internal/repository/"
 	}
 }

@@ -298,8 +298,8 @@ func (r *repository) UpdateByIDWithUserID(ctx context.Context, taskID, userID in
 	return task, nil
 }
 
-func (r *repository) UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken string) error {
-	err := r.validateRefreshToken(ctx, userID, oldToken)
+func (r *repository) UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken *model.Token) error {
+	err := r.validateRefreshToken(ctx, userID, oldToken.Token)
 	if err != nil {
 		return err
 	}
@@ -310,12 +310,13 @@ func (r *repository) UpdateRefreshToken(ctx context.Context, userID int64, oldTo
 	}
 	defer tx.Rollback()
 
-	oldHash := r.crypt.StringToSha256(oldToken)
-	newHash := r.crypt.StringToSha256(newToken)
+	oldHash := r.crypt.StringToSha256(oldToken.Token)
+	newHash := r.crypt.StringToSha256(newToken.Token)
 
 	_, err = tx.ExecContext(ctx,
-		"UPDATE refresh_tokens SET token_hash = ? WHERE user_id = ? AND token_hash = ?",
+		"UPDATE refresh_tokens SET token_hash = ?, expires_at = ? WHERE user_id = ? AND token_hash = ?",
 		newHash,
+		newToken.ExpirationTime,
 		userID,
 		oldHash,
 	)
@@ -326,20 +327,20 @@ func (r *repository) UpdateRefreshToken(ctx context.Context, userID int64, oldTo
 	return tx.Commit()
 }
 
-func (r *repository) InsertRefreshToken(ctx context.Context, refreshToken string, userID, expiresAt int64) error {
+func (r *repository) InsertRefreshToken(ctx context.Context, refreshToken *model.Token, userID int64) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	hash := r.crypt.StringToSha256(refreshToken)
+	hash := r.crypt.StringToSha256(refreshToken.Token)
 
 	_, err = tx.ExecContext(ctx,
 		"INSERT INTO refresh_tokens (user_id, expires_at, token_hash) VALUES (?, ?, ?)",
 		userID,
-		expiresAt,
-		string(hash),
+		refreshToken.ExpirationTime,
+		hash,
 	)
 	if err != nil {
 		return err

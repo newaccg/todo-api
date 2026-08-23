@@ -15,9 +15,9 @@ type Repository interface {
 	GetByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error)
 	CreateWithUserID(ctx context.Context, task *model.Task, id int64) (*model.Task, error)
 	UpdateByIDWithUserID(ctx context.Context, taskID, userID int64, task *model.Task) (*model.Task, error)
-	UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken string) error
+	UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken *model.Token) error
 	DeleteByIDWithUserID(ctx context.Context, taskID, userID int64) error
-	InsertRefreshToken(ctx context.Context, refreshToken string, userID, expiresAt int64) error
+	InsertRefreshToken(ctx context.Context, refreshToken *model.Token, userID int64) error
 }
 
 type JWT interface {
@@ -119,8 +119,8 @@ func (s *Service) UpdateTaskByIDWithUserID(ctx context.Context, taskID, userID i
 	return newTask, nil
 }
 
-func (s *Service) UpdateRefreshToken(ctx context.Context, oldToken string) (*model.TokenPair, error) {
-	claims, err := s.jwt.ValidateAndGetClaimsFromJWT(oldToken)
+func (s *Service) UpdateRefreshToken(ctx context.Context, oldTokenStr string) (*model.TokenPair, error) {
+	claims, err := s.jwt.ValidateAndGetClaimsFromJWT(oldTokenStr)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,12 @@ func (s *Service) UpdateRefreshToken(ctx context.Context, oldToken string) (*mod
 		return nil, err
 	}
 
-	err = s.repo.UpdateRefreshToken(ctx, userID, oldToken, newTokens.RefreshToken.Token)
+	oldToken := &model.Token{
+		Token: oldTokenStr,
+		ExpirationTime: claims.ExpirationTime,
+	}
+
+	err = s.repo.UpdateRefreshToken(ctx, userID, oldToken, &newTokens.RefreshToken)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +158,7 @@ func (s *Service) generateAndInsertTokens(ctx context.Context, userID int64) (*m
 		return nil, err
 	}
 
-	err = s.repo.InsertRefreshToken(ctx, tokens.RefreshToken.Token, userID, tokens.RefreshToken.ExpirationTime)
+	err = s.repo.InsertRefreshToken(ctx, &tokens.RefreshToken, userID)
 	if err != nil {
 		return nil, err
 	}

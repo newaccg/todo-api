@@ -84,8 +84,6 @@ like:
 
 *You can combine filtering and paginating*
 
-
-
 Creates and returns todo:
 
 ```textile
@@ -178,26 +176,33 @@ The API will be available on **port 8080** by default (you can change this at th
 │   ├── config
 │   │   ├── config.go # config loading
 │   │   └── config.json # project config
-│   ├── errors
-│   │   └── errors.go # sentinel errors
-│   ├── handler
+│   ├── errors # sentinel errors
+│   │   └── errors.go
+│   ├── handler # HTTP transfer and structural validation
 │   │   ├── customHandler.go # custom handler for logging and handling errors
-│   │   └── handler.go # HTTP transfer and structural validation
-│   ├── infrastructure
-│   │   ├── crypto
-│   │   │   └── crypto.go # encryptin passwords
-│   │   └── jwt
-│   │       └── jwt.go # JWT operations
-│   ├── middleware
-│   │   └── middleware.go # rate limiting and authorization
-│   ├── model
-│   │   └── model.go # models
-│   ├── repository
-│   │   ├── 0001_create_tables.sql # creating tables
-│   │   ├── 0002_schedule_clean.sql # creating event that cleans expired refresh tokens
-│   │   └── repository.go # DB operations
-│   └── service
-│       └── service.go # business logic
+│   │   ├── handler.go
+│   │   ├── router.go
+│   │   ├── todos.go
+│   │   └── user.go
+│   ├── infrastructure # utilites
+│   │   ├── crypto # encrypting passwords and refresh tokens
+│   │   │   └── crypto.go
+│   │   └── jwt # JWT operations
+│   │       └── jwt.go
+│   ├── middleware # rate limiting and authorization
+│   │   └── middleware.go
+│   ├── model # models
+│   │   └── model.go
+│   ├── repository # DB operations
+│   │   ├── refresh_token.go
+│   │   ├── repository.go
+│   │   ├── scripts
+│   │   │   ├── 0001_create_tables.sql # creating tables
+│   │   │   └── 0002_schedule_clean.sql # creating event that cleans expired refresh tokens
+│   │   ├── todos.go
+│   │   └── user.go
+│   └── service # business logic
+│       └── service.go
 └── README.md
 
 ```

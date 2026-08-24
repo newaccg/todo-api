@@ -26,6 +26,6 @@
 	},
 
 	"database": {
-		"pathToSQLSrcipts": "internal/repository/"
+		"pathToSQLSrcipts": "internal/repository/scripts"
 	}
 }

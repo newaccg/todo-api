@@ -217,19 +217,39 @@ func (r *repository) CreateWithUserID(ctx context.Context, task *model.Task, use
 	return task, nil
 }
 
-func (r *repository) GetAllWithUserID(ctx context.Context, userID int64) ([]model.Task, error) {
-	return r.getByQuery(ctx, "SELECT id, title, description name FROM todos WHERE user_id = ?", userID)
-}
-
-func (r *repository) GetByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error) {
+func (r *repository) GetAllWithUserID(ctx context.Context, userID int64, filter string, page, limit int) ([]model.Task, error) {
 	filter = "%" + filter + "%"
 
-	return r.getByQuery(ctx,
-		"SELECT id, title, description name FROM todos WHERE user_id = ? AND (title LIKE ? OR description LIKE ?)",
+	args := []any{
 		userID,
 		filter,
 		filter,
-	)
+	}
+
+	query := "SELECT id, title, description name FROM todos WHERE user_id = ? AND (title LIKE ? OR description LIKE ?)"
+
+	if page != 0 && limit != 0 {
+		query += " LIMIT ?, ?"
+		args = append(args, page*limit-limit)
+		args = append(args, limit)
+	}
+
+	todos := make([]model.Task, 0)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var task model.Task
+		rows.Scan(&task.ID, &task.Title, &task.Description)
+
+		todos = append(todos, task)
+	}
+
+	return todos, nil
 }
 
 func (r *repository) DeleteByIDWithUserID(ctx context.Context, taskID, userID int64) error {
@@ -393,23 +413,4 @@ func (r *repository) deleteRefreshToken(ctx context.Context, userID int64, token
 	}
 
 	return tx.Commit()
-}
-
-func (r *repository) getByQuery(ctx context.Context, query string, args ...any) ([]model.Task, error) {
-	todos := make([]model.Task, 0)
-
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var task model.Task
-		rows.Scan(&task.ID, &task.Title, &task.Description)
-
-		todos = append(todos, task)
-	}
-
-	return todos, nil
 }

@@ -11,8 +11,7 @@ import (
 type Repository interface {
 	Register(ctx context.Context, name, email, password string) (int64, error)
 	Login(ctx context.Context, email, password string) (int64, error)
-	GetAllWithUserID(ctx context.Context, userID int64) ([]model.Task, error)
-	GetByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error)
+	GetAllWithUserID(ctx context.Context, userID int64, filter string, page, limit int) ([]model.Task, error)
 	CreateWithUserID(ctx context.Context, task *model.Task, id int64) (*model.Task, error)
 	UpdateByIDWithUserID(ctx context.Context, taskID, userID int64, task *model.Task) (*model.Task, error)
 	UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken *model.Token) error
@@ -58,37 +57,13 @@ func (s *Service) LoginUser(ctx context.Context, email, password string) (*model
 	return s.generateAndInsertTokens(ctx, id)
 }
 
-func (s *Service) GetAllTasksWithUserID(ctx context.Context, userID int64) ([]model.Task, error) {
-	tasks, err := s.repo.GetAllWithUserID(ctx, userID)
+func (s *Service) GetAllTasksWithUserID(ctx context.Context, userID int64, filter string, page, limit int) ([]model.Task, error) {
+	tasks, err := s.repo.GetAllWithUserID(ctx, userID, filter, page, limit)
 	if err != nil {
 		return nil, fmt.Errorf("could not get all tasks: %w", err)
 	}
 
 	return tasks, nil
-}
-
-func (s *Service) GetTasksByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error) {
-	tasks, err := s.repo.GetByFilterWithUserID(ctx, userID, filter)
-	if err != nil {
-		return nil, fmt.Errorf("could not get tasks by filter %s: %w", filter, err)
-	}
-
-	return tasks, nil
-}
-
-func (s *Service) PaginateTasks(tasks []model.Task, page, limit int) ([]model.Task, error) {
-	startIndex := (page - 1) * limit
-	endIndex := startIndex + limit
-
-	if startIndex > len(tasks) {
-		return make([]model.Task, 0), nil
-	}
-
-	if endIndex > len(tasks) {
-		endIndex = len(tasks) // removed the " - 1" at the end
-	}
-
-	return tasks[startIndex:endIndex], nil
 }
 
 func (s *Service) CreateTaskWithUserID(ctx context.Context, title, description string, id int64) (*model.Task, error) {
@@ -132,7 +107,7 @@ func (s *Service) UpdateRefreshToken(ctx context.Context, oldTokenStr string) (*
 	}
 
 	oldToken := &model.Token{
-		Token: oldTokenStr,
+		Token:          oldTokenStr,
 		ExpirationTime: claims.ExpirationTime,
 	}
 

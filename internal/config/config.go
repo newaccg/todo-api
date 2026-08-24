@@ -59,8 +59,8 @@ type JWT struct {
 type DBConfig struct {
 	Password string
 	User     string
-	Address          string
-	Name             string
+	Address  string
+	Name     string
 
 	PathToSQLScripts string `json:"pathToSQLSrcipts"`
 }

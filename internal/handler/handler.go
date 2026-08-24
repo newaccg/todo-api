@@ -17,9 +17,7 @@ import (
 type Service interface {
 	RegisterUser(ctx context.Context, name, email, password string) (*model.TokenPair, error)
 	LoginUser(ctx context.Context, email, password string) (*model.TokenPair, error)
-	GetAllTasksWithUserID(ctx context.Context, userID int64) ([]model.Task, error)
-	GetTasksByFilterWithUserID(ctx context.Context, userID int64, filter string) ([]model.Task, error)
-	PaginateTasks(tasks []model.Task, page, limit int) ([]model.Task, error)
+	GetAllTasksWithUserID(ctx context.Context, userID int64, filter string, page, limit int) ([]model.Task, error)
 	CreateTaskWithUserID(ctx context.Context, title, description string, userId int64) (*model.Task, error)
 	UpdateTaskByIDWithUserID(ctx context.Context, taskID, userId int64, title, description string) (*model.Task, error)
 	UpdateRefreshToken(ctx context.Context, oldToken string) (*model.TokenPair, error)
@@ -147,34 +145,27 @@ func (h *handler) GetTasks(w http.ResponseWriter, r *http.Request) error {
 	filter := query.Get(h.urlValueNames.Filter)
 	ctx := r.Context()
 
-	if filter == "" { // if filter is specified...
-		tasks, err = h.service.GetAllTasksWithUserID(ctx, id)
-	} else {
-		tasks, err = h.service.GetTasksByFilterWithUserID(ctx, id, filter)
-	}
+	page, err := getIntFromURLQuery(query, h.urlValueNames.Page)
 	if err != nil {
 		return err
 	}
 
-	bad := false
-
-	page, err := getIntFromURLQuery(query, h.urlValueNames.Page)
-	if err != nil {
-		bad = true
-	}
-
 	limit, err := getIntFromURLQuery(query, h.urlValueNames.Limit)
 	if err != nil {
-		bad = true
+		return err
 	}
 
-	if !bad { // if page or limit values are not invalid...
-		// return paginated tasks
-		tasks, err = h.service.PaginateTasks(tasks, page, limit)
-		if err != nil {
-			return err
-		}
+	tasks, err = h.service.GetAllTasksWithUserID(ctx, id, filter, page, limit)
+	if err != nil {
+		return err
+	}
 
+	if page+limit != 0 && page*limit == 0 { // if either page or limit are not specified...
+		return errs.ErrInvalidURLValue
+	}
+
+	if page*limit != 0 { // if page and limit values are specified...
+		// return paginated tasks
 		output := struct {
 			Data  []model.Task `json:"data"`
 			Page  int          `json:"page"`
@@ -329,6 +320,10 @@ func getIDFromRequest(r *http.Request) (int64, error) {
 
 func getIntFromURLQuery(query url.Values, value string) (int, error) {
 	str := query.Get(value)
+	if str == "" {
+		return 0, nil
+	}
+
 	res, err := strconv.Atoi(str)
 	if err != nil || res <= 0 {
 		return 0, errs.ErrInvalidURLValue

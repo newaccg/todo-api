@@ -57,8 +57,12 @@ GET /todos?term=some_term
 Returns todos ordered by *some_order*:
 
 ```textile
-GET /todos?order=desc
+GET /todos?order=some_order
 ```
+
+*possible orders are: id, desc and title. You can change the names further in step 5*
+
+
 
 Returns paginated todos:
 

@@ -37,7 +37,8 @@
 		"bucketSizes": {
 			"todos": 5, // /todos
 			"register": 2, // /register
-			"login": 5 // /login
+			"login": 5, // /login
+			"refresh": 2 // /refresh
 		}
 	},
 

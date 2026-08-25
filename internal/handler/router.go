@@ -11,7 +11,7 @@ func (h *handler) RegisterRoutes() *http.ServeMux {
 	hdr = h.midware.RateLimit(h.Login, h.bucketSizes.Login)
 	mux.HandleFunc("POST /login", Handle(hdr))
 
-	hdr = h.midware.RateLimit(h.Refresh, h.bucketSizes.Todos)
+	hdr = h.midware.RateLimit(h.Refresh, h.bucketSizes.Refresh)
 	mux.HandleFunc("POST /refresh", Handle(hdr))
 
 	hdr = h.midware.RateLimit(h.GetTasks, h.bucketSizes.Todos)

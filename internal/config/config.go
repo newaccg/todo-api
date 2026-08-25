@@ -73,6 +73,7 @@ type BucketSizesConfig struct {
 	Todos    int `json:"todos"`
 	Register int `json:"register"`
 	Login    int `json:"login"`
+	Refresh    int `json:"refresh"`
 }
 
 // custom rules for unmarshaling JSON (string to time)

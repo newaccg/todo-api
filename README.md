@@ -10,7 +10,7 @@ Project idea is taken from [Roadmap.sh]([Todo List API Project Idea](https://roa
 
 * **Clean** Go **architecture**
 
-* **Configuration** via .env (using [godotenv](https://github.com/joho/godotenv)) file and internal/config/config.json
+* **Configuration** via .env (using [godotenv](https://github.com/joho/godotenv)) file and config.jsonc (using [jsonc](https://github.com/tidwall/jsonc))
 
 * **CRUD:**  Create, Read, Update and Delete todos
 
@@ -54,6 +54,12 @@ Returns todos matching the *some_term* filter:
 GET /todos?term=some_term
 ```
 
+Returns todos ordered by *some_order*:
+
+```textile
+GET /todos?order=desc
+```
+
 Returns paginated todos:
 
 ```textile
@@ -82,7 +88,11 @@ like:
 }
 ```
 
-*You can combine filtering and paginating*
+*You can combine filtering, paginating and ordering*
+
+*You can change all the names of the URL values further in step 5*
+
+
 
 Creates and returns todo:
 
@@ -143,10 +153,10 @@ SERVER_ADDRESS="localhost:8080"
 JWT_SECRET="YOUR_SECRET" # your secret string for signing JWTs
 ```
 
-5. (optional) **edit internal/config/config.json**
+5. (optional) **edit internal/config/config.jsonc**
 
 ```bash
-nano internal/config/config.json
+nano internal/config/config.jsonc
 ```
 
 6. **Run the application**
@@ -162,7 +172,7 @@ go build -ldflags="-s -w" -o todo-api cmd/main.go
 ./todo-api
 ```
 
-The API will be available on **port 8080** by default (you can change this at the *5* step)
+The API will be available on **port 8080** by default
 
 ## Structure
 
@@ -175,7 +185,7 @@ The API will be available on **port 8080** by default (you can change this at th
 ├── internal
 │   ├── config
 │   │   ├── config.go # config loading
-│   │   └── config.json # project config
+│   │   └── config.jsonc # project config
 │   ├── errors # sentinel errors
 │   │   └── errors.go
 │   ├── handler # HTTP transfer and structural validation
@@ -204,5 +214,4 @@ The API will be available on **port 8080** by default (you can change this at th
 │   └── service # business logic
 │       └── service.go
 └── README.md
-
 ```

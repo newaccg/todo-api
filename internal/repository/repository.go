@@ -20,15 +20,18 @@ type crypto interface {
 }
 
 type repository struct {
-	db     *sql.DB
+	db    *sql.DB
+	crypt crypto
+
+	orders *config.OrdersConfig
 	config *config.DBConfig
-	crypt  crypto
 }
 
-func NewRepository(config *config.DBConfig, cryp crypto) *repository {
+func NewRepository(config *config.DBConfig, cryp crypto, ord *config.OrdersConfig) *repository {
 	return &repository{
 		config: config,
 		crypt:  cryp,
+		orders: ord,
 	}
 }
 

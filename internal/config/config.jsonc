@@ -1,0 +1,47 @@
+{
+	// JWT settings
+	"JWT": {
+		"headerName": "Authorization", // header we read to get JWT from request
+		"accessTokenExpirationTime": "15m",
+		"refreshTokenExpirationTime": "90m"
+	},
+
+	// this block is set for uniform value names between layers and client
+	"valueNames": {
+		// URL value names e.g. <some url>?name=value
+		// if, for example, you set "page": "pag", you will have to use
+		// <some url>?pag=1 instead of <some url>?page=1
+		"URL": {
+			"page": "page",
+			"limit": "limit",
+			"filter": "term",
+			"order": "order",
+
+			"orders": { // available orders by which todos can be sorted
+				"id": "id",
+				"title": "title",
+				"description": "desc"
+			}
+		},
+
+		// value name for context.Context
+		"JWTUserID": "userID"
+	},
+
+	// rate limits. We use the token bucket algorithm
+	"rateLimiting": {
+		"refillPerSecond": 1, // number of tokens added to the bucker per second
+		"refreshDuration": "3m", // period after which the user is removed of the map of users
+
+		// the maximum number of tokens for each endpoint the bucket holds
+		"bucketSizes": {
+			"todos": 5, // /todos
+			"register": 2, // /register
+			"login": 5 // /login
+		}
+	},
+
+	"database": {
+		"pathToSQLSrcipts": "internal/repository/scripts" // .sql scripts that will execute when the API starts
+	}
+}

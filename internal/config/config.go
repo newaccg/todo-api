@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/tidwall/jsonc"
 )
 
 type Duration struct {
@@ -23,10 +24,43 @@ type Config struct {
 	RateLimiting RateLimitingConfig `json:"rateLimiting"`
 }
 
+type DBConfig struct {
+	Password string
+	User     string
+	Address  string
+	Name     string
+
+	PathToSQLScripts string `json:"pathToSQLSrcipts"`
+}
+
+type JWT struct {
+	Secret string
+
+	AccessExpirationTime  Duration `json:"accessTokenExpirationTime"`
+	RefreshExpirationTime Duration `json:"refreshTokenExpirationTime"`
+
+	HeaderName string `json:"headerName"`
+}
+
 type ValueNamesConfig struct {
 	Url ValueNamesURL `json:"URL"`
 
 	JwtUserID string `json:"JWTUserID"`
+}
+
+type ValueNamesURL struct {
+	Page   string `json:"page"`
+	Limit  string `json:"limit"`
+	Filter string `json:"filter"`
+	Order  string `json:"order"`
+
+	Orders OrdersConfig `json:"orders"`
+}
+
+type OrdersConfig struct {
+	ID          string
+	Title       string
+	Description string
 }
 
 type RateLimitingConfig struct {
@@ -39,30 +73,6 @@ type BucketSizesConfig struct {
 	Todos    int `json:"todos"`
 	Register int `json:"register"`
 	Login    int `json:"login"`
-}
-
-type ValueNamesURL struct {
-	Page   string `json:"page"`
-	Limit  string `json:"limit"`
-	Filter string `json:"filter"`
-}
-
-type JWT struct {
-	Secret string
-
-	AccessExpirationTime  Duration `json:"accessTokenExpirationTime"`
-	RefreshExpirationTime Duration `json:"refreshTokenExpirationTime"`
-
-	HeaderName string `json:"headerName"`
-}
-
-type DBConfig struct {
-	Password string
-	User     string
-	Address  string
-	Name     string
-
-	PathToSQLScripts string `json:"pathToSQLSrcipts"`
 }
 
 // custom rules for unmarshaling JSON (string to time)
@@ -93,10 +103,12 @@ func LoadConfig(configPath string) (*Config, error) {
 			)
 	}
 
-	js, err := os.ReadFile(configPath)
+	jsc, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not read config.json: %w", err)
 	}
+
+	js := jsonc.ToJSON(jsc)
 
 	err = json.Unmarshal(js, &config)
 	if err != nil {

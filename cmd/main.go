@@ -18,7 +18,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	cfg, err := config.LoadConfig("internal/config/config.json")
+	cfg, err := config.LoadConfig("internal/config/config.jsonc")
 	if err != nil {
 		slog.Error(
 			"could not load config",
@@ -28,7 +28,7 @@ func main() {
 	}
 
 	crypto := crypto.NewCrypto()
-	repo := repository.NewRepository(&cfg.DB, crypto)
+	repo := repository.NewRepository(&cfg.DB, crypto, &cfg.ValueNames.Url.Orders)
 	if err := repo.LoadDB(); err != nil {
 		slog.Error(
 			"could not load config",

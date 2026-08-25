@@ -22,6 +22,7 @@ func (h *handler) GetTasks(w http.ResponseWriter, r *http.Request) error {
 
 	query := r.URL.Query()
 	filter := query.Get(h.urlValueNames.Filter)
+	order := query.Get(h.urlValueNames.Order)
 	ctx := r.Context()
 
 	page, err := getIntFromURLQuery(query, h.urlValueNames.Page)
@@ -34,8 +35,12 @@ func (h *handler) GetTasks(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	tasks, err = h.service.GetAllTasksWithUserID(ctx, id, filter, page, limit)
+	tasks, err = h.service.GetAllTasksWithUserID(ctx, id, filter, order, page, limit)
 	if err != nil {
+		if errors.Is(err, errs.ErrInvalidOrder) {
+			return errs.ErrInvalidURLValue
+		}
+
 		return err
 	}
 

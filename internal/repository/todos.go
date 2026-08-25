@@ -49,19 +49,45 @@ func (r *repository) CreateWithUserID(ctx context.Context, task *model.Task, use
 	return task, nil
 }
 
-func (r *repository) GetAllWithUserID(ctx context.Context, userID int64, filter string, page, limit int) ([]model.Task, error) {
+func (r *repository) GetAllWithUserID(ctx context.Context, userID int64, filter, order string, page, limit int) ([]model.Task, error) {
+	// filtering
 	filter = "%" + filter + "%"
 
+	// common arguments for query
 	args := []any{
 		userID,
 		filter,
 		filter,
 	}
 
-	query := "SELECT id, title, description name FROM todos WHERE user_id = ? AND (title LIKE ? OR description LIKE ?)"
+	query := "SELECT id, title, description FROM todos WHERE user_id = ? AND (title LIKE ? OR description LIKE ?)"
 
+	// selecting order
+	if order != "" {
+		var ord string
+
+		switch order {
+
+		case r.orders.Description:
+			ord = "description"
+
+		case r.orders.ID:
+			ord = "id"
+
+		case r.orders.Title:
+			ord = "title"
+
+		default:
+			return nil, errs.ErrInvalidOrder
+		}
+
+		query += " ORDER BY " + ord
+	}
+
+	// pagination
 	if page != 0 && limit != 0 {
-		query += " LIMIT ?, ?"
+		query += " LIMIT ?, ? "
+
 		args = append(args, page*limit-limit)
 		args = append(args, limit)
 	}

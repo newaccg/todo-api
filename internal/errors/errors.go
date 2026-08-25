@@ -11,6 +11,7 @@ var (
 	ErrInvalidToken      = errors.New("invalid JWT")
 	ErrInvalidSignMethod = errors.New("invalid signing method")
 	ErrInvalidURLValue   = errors.New("invalid URL value(s)")
+	ErrInvalidOrder      = errors.New("invalid selected order")
 
 	ErrTokenExpired = errors.New("JWT expired")
 

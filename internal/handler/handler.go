@@ -13,7 +13,7 @@ import (
 type Service interface {
 	RegisterUser(ctx context.Context, name, email, password string) (*model.TokenPair, error)
 	LoginUser(ctx context.Context, email, password string) (*model.TokenPair, error)
-	GetAllTasksWithUserID(ctx context.Context, userID int64, filter string, page, limit int) ([]model.Task, error)
+	GetAllTasksWithUserID(ctx context.Context, userID int64, filter, order string, page, limit int) ([]model.Task, error)
 	CreateTaskWithUserID(ctx context.Context, title, description string, userId int64) (*model.Task, error)
 	UpdateTaskByIDWithUserID(ctx context.Context, taskID, userId int64, title, description string) (*model.Task, error)
 	UpdateRefreshToken(ctx context.Context, oldToken string) (*model.TokenPair, error)

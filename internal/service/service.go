@@ -11,7 +11,7 @@ import (
 type Repository interface {
 	Register(ctx context.Context, name, email, password string) (int64, error)
 	Login(ctx context.Context, email, password string) (int64, error)
-	GetAllWithUserID(ctx context.Context, userID int64, filter string, page, limit int) ([]model.Task, error)
+	GetAllWithUserID(ctx context.Context, userID int64, filter, order string, page, limit int) ([]model.Task, error)
 	CreateWithUserID(ctx context.Context, task *model.Task, id int64) (*model.Task, error)
 	UpdateByIDWithUserID(ctx context.Context, taskID, userID int64, task *model.Task) (*model.Task, error)
 	UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken *model.Token) error
@@ -57,8 +57,8 @@ func (s *Service) LoginUser(ctx context.Context, email, password string) (*model
 	return s.generateAndInsertTokens(ctx, id)
 }
 
-func (s *Service) GetAllTasksWithUserID(ctx context.Context, userID int64, filter string, page, limit int) ([]model.Task, error) {
-	tasks, err := s.repo.GetAllWithUserID(ctx, userID, filter, page, limit)
+func (s *Service) GetAllTasksWithUserID(ctx context.Context, userID int64, filter, order string, page, limit int) ([]model.Task, error) {
+	tasks, err := s.repo.GetAllWithUserID(ctx, userID, filter, order, page, limit)
 	if err != nil {
 		return nil, fmt.Errorf("could not get all tasks: %w", err)
 	}

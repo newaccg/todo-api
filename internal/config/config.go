@@ -73,7 +73,7 @@ type BucketSizesConfig struct {
 	Todos    int `json:"todos"`
 	Register int `json:"register"`
 	Login    int `json:"login"`
-	Refresh    int `json:"refresh"`
+	Refresh  int `json:"refresh"`
 }
 
 // custom rules for unmarshaling JSON (string to time)
@@ -121,10 +121,12 @@ func LoadConfig(configPath string) (*Config, error) {
 		return nil, err
 	}
 
-	config.DB.User, err = mustGetenv("DB_USER")
+	config.DB.User, err = mustGetenv("DB_USER_NAME")
 	if err != nil {
 		return nil, err
 	}
+
+	config.DB.Password = os.Getenv("DB_USER_PASSWORD")
 
 	config.DB.Address, err = mustGetenv("DB_ADDRESS")
 	if err != nil {
@@ -135,8 +137,6 @@ func LoadConfig(configPath string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	config.DB.Password = os.Getenv("DB_PASSWORD")
 
 	config.Jwt.Secret, err = mustGetenv("JWT_SECRET")
 	if err != nil {

@@ -36,6 +36,57 @@ Project idea is taken from [Roadmap.sh]([Todo List API Project Idea](https://roa
 
 ## Endpoints
 
+Registers you and returns access and refresh tokens:
+
+```textile
+POST /register
+{
+  "name": "JohnDoe",
+  "email": "john@doe.com",
+  "password": "password"
+}
+```
+
+like:
+
+```json
+{
+  "refreshToken": {
+    "Token": "<refresh token>",
+    "ExpirationTime": 1787916984
+  },
+  "accessToken": {
+    "Token": "<access token>",
+    "ExpirationTime": 1787912484
+  }
+}
+```
+
+
+
+Returns new access and refresh tokens:
+
+```textile
+POST /login
+{
+  "email": "john@doe.com",
+  "password": "password"
+}
+```
+
+Returns new access and refresh tokens  (recommended if you have not expired refresh token):
+
+```json
+POST /refresh
+{
+  "refreshToken": "<your refresh token>"
+}
+```
+
+
+
+**Each request to /todos must have *Authorization* header whose value is your access token**
+
 Returns all the todos:
 
 ```textile

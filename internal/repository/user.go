@@ -10,7 +10,7 @@ import (
 	errs "github.com/newaccg/todo-api/internal/errors"
 )
 
-func (r *repository) Register(ctx context.Context, name, email, password string) (int64, error) {
+func (r *repository) Register(ctx context.Context, name, email, passwordHash string) (int64, error) {
 	// transaction for rollback
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -18,17 +18,12 @@ func (r *repository) Register(ctx context.Context, name, email, password string)
 	}
 	defer tx.Rollback()
 
-	encryptedPassword, err := r.crypt.EncryptPassword(password)
-	if err != nil {
-		return 0, err
-	}
-
 	// inserting user
 	res, err := tx.ExecContext(ctx,
 		"INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
 		name,
 		email,
-		encryptedPassword,
+		passwordHash,
 	)
 	if err != nil {
 		if sqlErr, ok := err.(*mysql.MySQLError); ok {
@@ -53,7 +48,7 @@ func (r *repository) Register(ctx context.Context, name, email, password string)
 	return id, nil
 }
 
-func (r *repository) Login(ctx context.Context, email, password string) (int64, error) {
+func (r *repository) GetUserIDAndPasswordHashByEmail(ctx context.Context, email string) (int64, string, error) {
 	var id int64
 	var hash string
 
@@ -63,20 +58,11 @@ func (r *repository) Login(ctx context.Context, email, password string) (int64, 
 	).Scan(&id, &hash)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return 0, errs.ErrUserNotFound
+			return 0, "", errs.ErrUserNotFound
 		}
 
-		return 0, err
+		return 0, "", err
 	}
 
-	matching, err := r.crypt.ArePasswordAndHashEqual(password, hash)
-	if err != nil {
-		return 0, err
-	}
-
-	if !matching {
-		return 0, errs.ErrWrondPassword
-	}
-
-	return id, nil
+	return id, hash, nil
 }

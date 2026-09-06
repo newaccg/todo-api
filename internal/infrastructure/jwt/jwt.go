@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	errs "github.com/newaccg/todo-api/internal/errors"
 	"github.com/newaccg/todo-api/internal/model"
@@ -63,6 +64,9 @@ func (j *jwebtoken) ValidateAndGetClaimsFromJWT(token string) (*model.Claims, er
 			return nil, err
 		}
 
+		jti := claims["jti"].(string)
+		customClaims.TokenID = jti
+
 		if time.Now().Unix() > customClaims.ExpirationTime {
 			return nil, errs.ErrTokenExpired
 		}
@@ -75,8 +79,16 @@ func (j *jwebtoken) ValidateAndGetClaimsFromJWT(token string) (*model.Claims, er
 
 func (j *jwebtoken) generateJWT(userID int64, dur time.Duration) (*model.Token, error) {
 	exp := time.Now().Add(dur).UTC().Unix()
+
+	uuid, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	jti := uuid.String()
+
 	claims := jwt.MapClaims{
 		"exp":                exp,
+		"jti":                jti,
 		j.jwtUserIDValueName: userID,
 	}
 
@@ -86,9 +98,15 @@ func (j *jwebtoken) generateJWT(userID int64, dur time.Duration) (*model.Token, 
 		return nil, err
 	}
 
-	res := &model.Token{
-		Token:          resultToken,
+	resultClaims := model.Claims{
 		ExpirationTime: exp,
+		UserID:         userID,
+		TokenID:        jti,
+	}
+
+	res := &model.Token{
+		Token:  resultToken,
+		Claims: resultClaims,
 	}
 
 	return res, nil

@@ -46,7 +46,7 @@ func Handle(f func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 				resp.Err = "user with given email doesn't exist"
 				resp.Code = http.StatusUnauthorized
 
-			case errors.Is(err, errs.ErrWrondPassword):
+			case errors.Is(err, errs.ErrWrongPassword):
 				resp.Err = "wrong password"
 				resp.Code = http.StatusUnauthorized
 

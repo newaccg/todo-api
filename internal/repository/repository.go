@@ -13,24 +13,16 @@ import (
 	"github.com/newaccg/todo-api/internal/config"
 )
 
-type crypto interface {
-	EncryptPassword(str string) (string, error)
-	ArePasswordAndHashEqual(str string, hash string) (bool, error)
-	StringToSha256(str string) string
-}
-
 type repository struct {
-	db    *sql.DB
-	crypt crypto
+	db *sql.DB
 
 	orders *config.OrdersConfig
 	config *config.DBConfig
 }
 
-func NewRepository(config *config.DBConfig, cryp crypto, ord *config.OrdersConfig) *repository {
+func NewRepository(config *config.DBConfig, ord *config.OrdersConfig) *repository {
 	return &repository{
 		config: config,
-		crypt:  cryp,
 		orders: ord,
 	}
 }

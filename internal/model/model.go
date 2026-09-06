@@ -19,11 +19,12 @@ type TokenPair struct {
 }
 
 type Token struct {
-	Token          string
-	ExpirationTime int64 // UNIX time
+	Token  string
+	Claims Claims
 }
 
 type Claims struct {
+	TokenID        string
 	ExpirationTime int64 // UNIX time
 	UserID         int64
 }

@@ -5,18 +5,19 @@ import (
 	"fmt"
 
 	"github.com/newaccg/todo-api/internal/config"
+	errs "github.com/newaccg/todo-api/internal/errors"
 	"github.com/newaccg/todo-api/internal/model"
 )
 
 type Repository interface {
-	Register(ctx context.Context, name, email, password string) (int64, error)
-	Login(ctx context.Context, email, password string) (int64, error)
+	Register(ctx context.Context, name, email, passwordHash string) (int64, error)
+	GetUserIDAndPasswordHashByEmail(ctx context.Context, email string) (int64, string, error)
 	GetAllWithUserID(ctx context.Context, userID int64, filter, order string, page, limit int) ([]model.Task, error)
 	CreateWithUserID(ctx context.Context, task *model.Task, id int64) (*model.Task, error)
 	UpdateByIDWithUserID(ctx context.Context, taskID, userID int64, task *model.Task) (*model.Task, error)
-	UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken *model.Token) error
+	UpdateRefreshToken(ctx context.Context, oldToken, newToken *model.Token) error
 	DeleteByIDWithUserID(ctx context.Context, taskID, userID int64) error
-	InsertRefreshToken(ctx context.Context, refreshToken *model.Token, userID int64) error
+	InsertRefreshToken(ctx context.Context, refreshToken *model.Token) error
 }
 
 type JWT interface {
@@ -25,22 +26,35 @@ type JWT interface {
 	ValidateAndGetClaimsFromJWT(token string) (*model.Claims, error)
 }
 
-type Service struct {
-	cfg  *config.JWT
-	repo Repository
-	jwt  JWT
+type crypto interface {
+	Encrypt(str string) (string, error)
+	AreStringAndHashEqual(str string, hash string) (bool, error)
 }
 
-func NewService(repo Repository, jwt JWT, conf *config.JWT) *Service {
+type Service struct {
+	cfg *config.JWT
+
+	repo  Repository
+	jwt   JWT
+	crypt crypto
+}
+
+func NewService(repo Repository, jwt JWT, conf *config.JWT, cr crypto) *Service {
 	return &Service{
-		cfg:  conf,
-		repo: repo,
-		jwt:  jwt,
+		cfg:   conf,
+		repo:  repo,
+		jwt:   jwt,
+		crypt: cr,
 	}
 }
 
 func (s *Service) RegisterUser(ctx context.Context, name, email, password string) (*model.TokenPair, error) {
-	id, err := s.repo.Register(ctx, name, email, password)
+	hash, err := s.crypt.Encrypt(password)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := s.repo.Register(ctx, name, email, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +63,18 @@ func (s *Service) RegisterUser(ctx context.Context, name, email, password string
 }
 
 func (s *Service) LoginUser(ctx context.Context, email, password string) (*model.TokenPair, error) {
-	id, err := s.repo.Login(ctx, email, password)
+	id, hash, err := s.repo.GetUserIDAndPasswordHashByEmail(ctx, email)
 	if err != nil {
 		return nil, err
+	}
+
+	match, err := s.crypt.AreStringAndHashEqual(password, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	if !match {
+		return nil, errs.ErrWrongPassword
 	}
 
 	return s.generateAndInsertTokens(ctx, id)
@@ -107,11 +130,16 @@ func (s *Service) UpdateRefreshToken(ctx context.Context, oldTokenStr string) (*
 	}
 
 	oldToken := &model.Token{
-		Token:          oldTokenStr,
-		ExpirationTime: claims.ExpirationTime,
+		Token:  oldTokenStr,
+		Claims: *claims,
 	}
 
-	err = s.repo.UpdateRefreshToken(ctx, userID, oldToken, &newTokens.RefreshToken)
+	refresh, err := s.ecnryprRefreshTokenFromPair(newTokens)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repo.UpdateRefreshToken(ctx, oldToken, refresh)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +161,12 @@ func (s *Service) generateAndInsertTokens(ctx context.Context, userID int64) (*m
 		return nil, err
 	}
 
-	err = s.repo.InsertRefreshToken(ctx, &tokens.RefreshToken, userID)
+	refresh, err := s.ecnryprRefreshTokenFromPair(tokens)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repo.InsertRefreshToken(ctx, refresh)
 	if err != nil {
 		return nil, err
 	}
@@ -158,4 +191,17 @@ func (s *Service) generateTokenPair(userID int64) (*model.TokenPair, error) {
 	}
 
 	return pair, nil
+}
+
+func (s *Service) ecnryprRefreshTokenFromPair(pair *model.TokenPair) (*model.Token, error) {
+	refresh := pair.RefreshToken
+
+	token, err := s.crypt.Encrypt(refresh.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	refresh.Token = token
+
+	return &refresh, nil
 }

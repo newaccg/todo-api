@@ -15,8 +15,8 @@ func NewCrypto() *crypto {
 	return &crypto{}
 }
 
-func (c *crypto) EncryptPassword(password string) (string, error) {
-	res, err := argon2id.CreateHash(password, argon2id.DefaultParams)
+func (c *crypto) Encrypt(str string) (string, error) {
+	res, err := argon2id.CreateHash(str, argon2id.DefaultParams)
 	if err != nil {
 		return "", fmt.Errorf("could not encrypt password: %w", err)
 	}
@@ -24,8 +24,8 @@ func (c *crypto) EncryptPassword(password string) (string, error) {
 	return res, nil
 }
 
-func (c *crypto) ArePasswordAndHashEqual(password string, hash string) (bool, error) {
-	return argon2id.ComparePasswordAndHash(password, hash)
+func (c *crypto) AreStringAndHashEqual(str string, hash string) (bool, error) {
+	return argon2id.ComparePasswordAndHash(str, hash)
 }
 
 func (c *crypto) StringToSha256(str string) string {

@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS todos (
 -- creating refresh tokens
 CREATE TABLE IF NOT EXISTS refresh_tokens (
 	user_id BIGINT NOT NULL,
-	token_hash VARCHAR(64),
+	id VARCHAR(64) NOT NULL,
+	token_hash VARCHAR(255),
 	expires_at BIGINT,
 	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

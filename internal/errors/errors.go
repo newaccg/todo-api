@@ -20,7 +20,7 @@ var (
 	ErrEmptyField = errors.New("empty field in given input")
 	ErrEmptyToken = errors.New("got empty token")
 
-	ErrWrondPassword = errors.New("password from DB and given password don't match")
+	ErrWrongPassword = errors.New("password from DB and given password don't match")
 
 	ErrTooManyRequests = errors.New("too many requests")
 )

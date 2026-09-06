@@ -28,7 +28,7 @@ func main() {
 	}
 
 	crypto := crypto.NewCrypto()
-	repo := repository.NewRepository(&cfg.DB, crypto, &cfg.ValueNames.Url.Orders)
+	repo := repository.NewRepository(&cfg.DB, &cfg.ValueNames.Url.Orders)
 	if err := repo.LoadDB(); err != nil {
 		slog.Error(
 			"could not load config",
@@ -40,7 +40,7 @@ func main() {
 
 	jwt := jwt.NewJWT(cfg.Jwt.AccessExpirationTime.Duration, cfg.Jwt.RefreshExpirationTime.Duration, cfg.Jwt.Secret, cfg.ValueNames.JwtUserID)
 	midware := middleware.NewMiddleware(cfg.Jwt.HeaderName, jwt, cfg.ValueNames.JwtUserID, cfg.RateLimiting.RefillPerSecond, cfg.RateLimiting.RefreshDuration.Duration)
-	svc := service.NewService(repo, jwt, &cfg.Jwt)
+	svc := service.NewService(repo, jwt, &cfg.Jwt, crypto)
 	h := handler.NewHandler(svc, midware, &cfg.ValueNames.Url, cfg.ValueNames.JwtUserID, &cfg.RateLimiting.BucketSizes)
 
 	mux := h.RegisterRoutes()

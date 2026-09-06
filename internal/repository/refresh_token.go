@@ -10,8 +10,8 @@ import (
 	"github.com/newaccg/todo-api/internal/model"
 )
 
-func (r *repository) UpdateRefreshToken(ctx context.Context, userID int64, oldToken, newToken *model.Token) error {
-	err := r.validateRefreshToken(ctx, userID, oldToken.Token)
+func (r *repository) UpdateRefreshToken(ctx context.Context, oldToken, newToken *model.Token) error {
+	err := r.validateRefreshToken(ctx, oldToken)
 	if err != nil {
 		return err
 	}
@@ -22,16 +22,15 @@ func (r *repository) UpdateRefreshToken(ctx context.Context, userID int64, oldTo
 	}
 	defer tx.Rollback()
 
-	oldHash := r.crypt.StringToSha256(oldToken.Token)
-	newHash := r.crypt.StringToSha256(newToken.Token)
-
 	_, err = tx.ExecContext(ctx,
-		"UPDATE refresh_tokens SET token_hash = ?, expires_at = ? WHERE user_id = ? AND token_hash = ?",
-		newHash,
-		newToken.ExpirationTime,
-		userID,
-		oldHash,
+		"DELETE FROM refresh_tokens WHERE id = ?",
+		oldToken.Claims.TokenID,
 	)
+	if err != nil {
+		return err
+	}
+
+	err = r.insertRefreshToken(ctx, newToken, tx)
 	if err != nil {
 		return err
 	}
@@ -39,21 +38,14 @@ func (r *repository) UpdateRefreshToken(ctx context.Context, userID int64, oldTo
 	return tx.Commit()
 }
 
-func (r *repository) InsertRefreshToken(ctx context.Context, refreshToken *model.Token, userID int64) error {
+func (r *repository) InsertRefreshToken(ctx context.Context, refreshToken *model.Token) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	hash := r.crypt.StringToSha256(refreshToken.Token)
-
-	_, err = tx.ExecContext(ctx,
-		"INSERT INTO refresh_tokens (user_id, expires_at, token_hash) VALUES (?, ?, ?)",
-		userID,
-		refreshToken.ExpirationTime,
-		hash,
-	)
+	err = r.insertRefreshToken(ctx, refreshToken, tx)
 	if err != nil {
 		return err
 	}
@@ -61,14 +53,27 @@ func (r *repository) InsertRefreshToken(ctx context.Context, refreshToken *model
 	return tx.Commit()
 }
 
-func (r *repository) validateRefreshToken(ctx context.Context, userID int64, token string) error {
+func (r *repository) insertRefreshToken(ctx context.Context, refreshToken *model.Token, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx,
+		"INSERT INTO refresh_tokens (user_id, id, expires_at, token_hash) VALUES (?, ?, ?, ?)",
+		refreshToken.Claims.UserID,
+		refreshToken.Claims.TokenID,
+		refreshToken.Claims.ExpirationTime,
+		refreshToken.Token,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *repository) validateRefreshToken(ctx context.Context, token *model.Token) error {
 	var exp int64
-	hash := r.crypt.StringToSha256(token)
 
 	row := r.db.QueryRowContext(ctx,
-		"SELECT expires_at FROM refresh_tokens WHERE user_id = ? AND token_hash = ?",
-		userID,
-		hash,
+		"SELECT expires_at FROM refresh_tokens WHERE id = ?",
+		token.Claims.TokenID,
 	)
 
 	err := row.Scan(&exp)
@@ -81,14 +86,14 @@ func (r *repository) validateRefreshToken(ctx context.Context, userID int64, tok
 	}
 
 	if time.Now().Unix() > exp {
-		r.deleteRefreshToken(ctx, userID, token)
+		r.deleteRefreshToken(ctx, token)
 		return errs.ErrTokenExpired
 	}
 
 	return nil
 }
 
-func (r *repository) deleteRefreshToken(ctx context.Context, userID int64, token string) error {
+func (r *repository) deleteRefreshToken(ctx context.Context, token *model.Token) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -96,9 +101,9 @@ func (r *repository) deleteRefreshToken(ctx context.Context, userID int64, token
 	defer tx.Rollback()
 
 	_, err = tx.ExecContext(ctx,
-		"DELETE FROM refresh_tokens WHERE user_id = ? AND token_hash = ?",
-		userID,
-		token,
+		"DELETE FROM refresh_tokens WHERE id = ?",
+		token.Claims.UserID,
+		token.Token,
 	)
 	if err != nil {
 		return err

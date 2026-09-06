@@ -103,7 +103,6 @@ func (r *repository) deleteRefreshToken(ctx context.Context, token *model.Token)
 	_, err = tx.ExecContext(ctx,
 		"DELETE FROM refresh_tokens WHERE id = ?",
 		token.Claims.UserID,
-		token.Token,
 	)
 	if err != nil {
 		return err

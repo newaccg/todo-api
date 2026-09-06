@@ -134,7 +134,7 @@ func (s *Service) UpdateRefreshToken(ctx context.Context, oldTokenStr string) (*
 		Claims: *claims,
 	}
 
-	refresh, err := s.ecnryprRefreshTokenFromPair(newTokens)
+	refresh, err := s.encryptRefreshTokenFromPair(newTokens)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func (s *Service) generateAndInsertTokens(ctx context.Context, userID int64) (*m
 		return nil, err
 	}
 
-	refresh, err := s.ecnryprRefreshTokenFromPair(tokens)
+	refresh, err := s.encryptRefreshTokenFromPair(tokens)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (s *Service) generateTokenPair(userID int64) (*model.TokenPair, error) {
 	return pair, nil
 }
 
-func (s *Service) ecnryprRefreshTokenFromPair(pair *model.TokenPair) (*model.Token, error) {
+func (s *Service) encryptRefreshTokenFromPair(pair *model.TokenPair) (*model.Token, error) {
 	refresh := pair.RefreshToken
 
 	token, err := s.crypt.Encrypt(refresh.Token)

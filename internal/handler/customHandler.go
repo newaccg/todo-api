@@ -78,6 +78,10 @@ func Handle(f func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 				resp.Err = "given token is empty"
 				resp.Code = http.StatusUnauthorized
 
+			case errors.Is(err, errs.ErrEmptyField):
+				resp.Err = "given field(s) is(are) empty"
+				resp.Code = http.StatusBadRequest
+
 			case errors.Is(err, errs.ErrTooManyRequests):
 				resp.Err = "too many requests"
 				resp.Code = http.StatusTooManyRequests

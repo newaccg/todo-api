@@ -2,11 +2,9 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/newaccg/todo-api/internal/config"
-	errs "github.com/newaccg/todo-api/internal/errors"
 	"github.com/newaccg/todo-api/internal/model"
 )
 
@@ -47,31 +45,6 @@ func NewHandler(svc Service, mware middleware, urlVals *config.ValueNamesURL, jw
 		jwtUserIDValueName: jwtUserIDValueName,
 		bucketSizes:        sizes,
 	}
-}
-
-func (h *handler) Refresh(w http.ResponseWriter, r *http.Request) error {
-	var input struct {
-		RefreshToken string `json:"refreshToken"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		return errs.ErrInvalidJSON
-	}
-
-	if input.RefreshToken == "" {
-		return errs.ErrEmptyToken
-	}
-
-	ctx := r.Context()
-
-	tokens, err := h.service.UpdateRefreshToken(ctx, input.RefreshToken)
-	if err != nil {
-		return err
-	}
-
-	writeJSON(w, tokens)
-
-	return nil
 }
 
 func writeJSON(w http.ResponseWriter, msg any) {

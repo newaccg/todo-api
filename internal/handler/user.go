@@ -57,6 +57,31 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func (h *handler) Refresh(w http.ResponseWriter, r *http.Request) error {
+	var input struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		return errs.ErrInvalidJSON
+	}
+
+	if input.RefreshToken == "" {
+		return errs.ErrEmptyToken
+	}
+
+	ctx := r.Context()
+
+	tokens, err := h.service.UpdateRefreshToken(ctx, input.RefreshToken)
+	if err != nil {
+		return err
+	}
+
+	writeJSON(w, tokens)
+
+	return nil
+}
+
 // structural validation
 func validateInputStrings(input ...string) error {
 	if slices.Contains(input, "") {

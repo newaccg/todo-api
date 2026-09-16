@@ -20,7 +20,7 @@ type Service interface {
 
 type middleware interface {
 	Auth(CustomHandler) CustomHandler
-	RateLimit(next CustomHandler, bucketSize int) CustomHandler
+	RateLimit(next CustomHandler, path string, bucketSize int) CustomHandler
 }
 
 type handler struct {

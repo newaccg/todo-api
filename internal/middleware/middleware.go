@@ -69,14 +69,14 @@ func (m *middleware) Auth(next handler.CustomHandler) handler.CustomHandler {
 	}
 }
 
-func (m *middleware) RateLimit(next handler.CustomHandler, bucketSize int) handler.CustomHandler {
+func (m *middleware) RateLimit(next handler.CustomHandler, path string, bucketSize int) handler.CustomHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			return err
 		}
 
-		limiter := m.getVisitor(ip, r.URL.Path, bucketSize)
+		limiter := m.getVisitor(ip, path, bucketSize)
 		if !limiter.Allow() {
 			return errs.ErrTooManyRequests
 		}

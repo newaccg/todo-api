@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	errs "github.com/newaccg/todo-api/internal/errors"
+	"github.com/newaccg/todo-api/internal/model"
 )
 
 func (h *handler) Register(w http.ResponseWriter, r *http.Request) error {
@@ -28,7 +29,7 @@ func (h *handler) Register(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	writeJSON(w, tokens)
+	writeTokens(w, tokens)
 
 	return nil
 }
@@ -52,7 +53,7 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	writeJSON(w, tokens)
+	writeTokens(w, tokens)
 
 	return nil
 }
@@ -77,7 +78,7 @@ func (h *handler) Refresh(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	writeJSON(w, tokens)
+	writeTokens(w, tokens)
 
 	return nil
 }
@@ -89,4 +90,16 @@ func validateInputStrings(input ...string) error {
 	}
 
 	return nil
+}
+
+func writeTokens(w http.ResponseWriter, tokens *model.TokenPair) {
+	output := struct {
+		AccessToken  string `json:"accessToken"`
+		RefreshToken string `json:"refreshToken"`
+	}{
+		AccessToken:  tokens.AccessToken.Token,
+		RefreshToken: tokens.RefreshToken.Token,
+	}
+
+	writeJSON(w, output)
 }

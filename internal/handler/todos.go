@@ -161,7 +161,7 @@ func getIntFromURLQuery(query url.Values, value string) (int, error) {
 }
 
 func getIDFromRequest(r *http.Request) (int64, error) {
-	str := r.PathValue("id")
+	str := r.PathValue(constants.URLIDValue)
 	id, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
 		return 0, errs.ErrInvalidID

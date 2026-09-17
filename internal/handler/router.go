@@ -1,6 +1,11 @@
 package handler
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/newaccg/todo-api/internal/constants"
+)
 
 func (h *handler) RegisterRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
@@ -24,11 +29,11 @@ func (h *handler) RegisterRoutes() *http.ServeMux {
 
 	hdr = h.midware.RateLimit(h.UpdateTask, "/todos", h.bucketSizes.Todos)
 	hdr = h.midware.Auth(hdr)
-	mux.HandleFunc("PUT /todos/{id}", Handle(hdr))
+	mux.HandleFunc(fmt.Sprintf("PUT /todos/{%s}", constants.URLIDValue), Handle(hdr))
 
 	hdr = h.midware.RateLimit(h.DeleteTask, "/todos", h.bucketSizes.Todos)
 	hdr = h.midware.Auth(hdr)
-	mux.HandleFunc("DELETE /todos/{id}", Handle(hdr))
+	mux.HandleFunc(fmt.Sprintf("DELETE /todos/{%s}", constants.URLIDValue), Handle(hdr))
 
 	return mux
 }

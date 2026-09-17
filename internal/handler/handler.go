@@ -25,7 +25,6 @@ type middleware interface {
 
 type handler struct {
 	urlValueNames      *config.ValueNamesURL
-	jwtUserIDValueName string
 	bucketSizes        *config.BucketSizesConfig
 
 	service Service
@@ -37,12 +36,11 @@ type taskRequest struct {
 	Description string `json:"description"`
 }
 
-func NewHandler(svc Service, mware middleware, urlVals *config.ValueNamesURL, jwtUserIDValueName string, sizes *config.BucketSizesConfig) *handler {
+func NewHandler(svc Service, mware middleware, urlVals *config.ValueNamesURL, sizes *config.BucketSizesConfig) *handler {
 	return &handler{
 		service:            svc,
 		midware:            mware,
 		urlValueNames:      urlVals,
-		jwtUserIDValueName: jwtUserIDValueName,
 		bucketSizes:        sizes,
 	}
 }

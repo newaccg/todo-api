@@ -16,15 +16,15 @@ type jwebtoken struct {
 	refreshTokenExpirationTime time.Duration
 
 	secret             string
-	jwtUserIDValueName string
 }
 
-func NewJWT(accessExpirationTime, refreshExpirationTime time.Duration, JWTSecret, jwtUserIDValueName string) *jwebtoken {
+const JWTUserIDKey = "userID"
+
+func NewJWT(accessExpirationTime, refreshExpirationTime time.Duration, JWTSecret string) *jwebtoken {
 	return &jwebtoken{
 		accessTokenExpirationTime:  accessExpirationTime,
 		refreshTokenExpirationTime: refreshExpirationTime,
 		secret:                     JWTSecret,
-		jwtUserIDValueName:         jwtUserIDValueName,
 	}
 }
 
@@ -54,7 +54,7 @@ func (j *jwebtoken) ValidateAndGetClaimsFromJWT(token string) (*model.Claims, er
 	if claims, ok := parsed.Claims.(jwt.MapClaims); ok && parsed.Valid {
 		customClaims := &model.Claims{}
 
-		customClaims.UserID, err = claimValueToInt64(claims[j.jwtUserIDValueName])
+		customClaims.UserID, err = claimValueToInt64(claims[JWTUserIDKey])
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +89,7 @@ func (j *jwebtoken) generateJWT(userID int64, dur time.Duration) (*model.Token, 
 	claims := jwt.MapClaims{
 		"exp":                exp,
 		"jti":                jti,
-		j.jwtUserIDValueName: userID,
+		JWTUserIDKey: userID,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

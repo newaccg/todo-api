@@ -44,8 +44,6 @@ type JWT struct {
 
 type ValueNamesConfig struct {
 	Url ValueNamesURL `json:"URL"`
-
-	JwtUserID string `json:"JWTUserID"`
 }
 
 type ValueNamesURL struct {

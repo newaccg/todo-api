@@ -38,10 +38,10 @@ func main() {
 	}
 	defer repo.UnloadDB()
 
-	jwt := jwt.NewJWT(cfg.Jwt.AccessExpirationTime.Duration, cfg.Jwt.RefreshExpirationTime.Duration, cfg.Jwt.Secret, cfg.ValueNames.JwtUserID)
-	midware := middleware.NewMiddleware(cfg.Jwt.HeaderName, jwt, cfg.ValueNames.JwtUserID, cfg.RateLimiting.RefillPerSecond, cfg.RateLimiting.RefreshDuration.Duration)
+	jwt := jwt.NewJWT(cfg.Jwt.AccessExpirationTime.Duration, cfg.Jwt.RefreshExpirationTime.Duration, cfg.Jwt.Secret)
+	midware := middleware.NewMiddleware(cfg.Jwt.HeaderName, jwt, cfg.RateLimiting.RefillPerSecond, cfg.RateLimiting.RefreshDuration.Duration)
 	svc := service.NewService(repo, jwt, &cfg.Jwt, crypto)
-	h := handler.NewHandler(svc, midware, &cfg.ValueNames.Url, cfg.ValueNames.JwtUserID, &cfg.RateLimiting.BucketSizes)
+	h := handler.NewHandler(svc, midware, &cfg.ValueNames.Url, &cfg.RateLimiting.BucketSizes)
 
 	mux := h.RegisterRoutes()
 	err = http.ListenAndServe(cfg.ServerAddress, mux)

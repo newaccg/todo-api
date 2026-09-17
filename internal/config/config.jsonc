@@ -22,10 +22,7 @@
 				"title": "title",
 				"description": "desc"
 			}
-		},
-
-		// value name for context.Context
-		"JWTUserID": "userID"
+		}
 	},
 
 	// rate limits. We use the token bucket algorithm

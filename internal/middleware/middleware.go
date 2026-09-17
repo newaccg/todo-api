@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/time/rate"
 
+	"github.com/newaccg/todo-api/internal/constants"
 	errs "github.com/newaccg/todo-api/internal/errors"
 	"github.com/newaccg/todo-api/internal/handler"
 	"github.com/newaccg/todo-api/internal/model"
@@ -20,7 +21,6 @@ type jwebtoken interface {
 }
 
 type middleware struct {
-	jwtUserIDValueName string
 	jwt                jwebtoken
 	headerName         string
 
@@ -35,11 +35,10 @@ type visitor struct {
 	lastSeen time.Time
 }
 
-func NewMiddleware(hName string, jwt jwebtoken, jwtUserIDValueName string, refillSpeed int, refreshDur time.Duration) *middleware {
+func NewMiddleware(hName string, jwt jwebtoken, refillSpeed int, refreshDur time.Duration) *middleware {
 	res := &middleware{
 		jwt:                jwt,
 		headerName:         hName,
-		jwtUserIDValueName: jwtUserIDValueName,
 
 		rateLimitRefillPerSecond: refillSpeed,
 		rateLimitRefreshDuration: refreshDur,
@@ -63,7 +62,7 @@ func (m *middleware) Auth(next handler.CustomHandler) handler.CustomHandler {
 			return fmt.Errorf("could not process token \"%s\": %w", token, err)
 		}
 
-		ctx := context.WithValue(r.Context(), m.jwtUserIDValueName, claims.UserID)
+		ctx := context.WithValue(r.Context(), constants.JWTContextUserID, claims.UserID)
 
 		return next(w, r.WithContext(ctx))
 	}

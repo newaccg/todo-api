@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/newaccg/todo-api/internal/constants"
 	errs "github.com/newaccg/todo-api/internal/errors"
 	"github.com/newaccg/todo-api/internal/model"
 )
@@ -175,7 +176,7 @@ func getIDFromRequest(r *http.Request) (int64, error) {
 }
 
 func (h *handler) getUserIDFromContext(ctx context.Context) (int64, error) {
-	id, ok := ctx.Value(h.jwtUserIDValueName).(int64)
+	id, ok := ctx.Value(constants.JWTContextUserID).(int64)
 	if !ok {
 		return 0, errors.New("invalid JWT user ID value: could not convert to int64")
 	}

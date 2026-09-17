@@ -24,8 +24,8 @@ type middleware interface {
 }
 
 type handler struct {
-	urlValueNames      *config.ValueNamesURL
-	bucketSizes        *config.BucketSizesConfig
+	urlValueNames *config.ValueNamesURL
+	bucketSizes   *config.BucketSizesConfig
 
 	service Service
 	midware middleware
@@ -38,10 +38,10 @@ type taskRequest struct {
 
 func NewHandler(svc Service, mware middleware, urlVals *config.ValueNamesURL, sizes *config.BucketSizesConfig) *handler {
 	return &handler{
-		service:            svc,
-		midware:            mware,
-		urlValueNames:      urlVals,
-		bucketSizes:        sizes,
+		service:       svc,
+		midware:       mware,
+		urlValueNames: urlVals,
+		bucketSizes:   sizes,
 	}
 }
 

@@ -21,8 +21,8 @@ type jwebtoken interface {
 }
 
 type middleware struct {
-	jwt                jwebtoken
-	headerName         string
+	jwt        jwebtoken
+	headerName string
 
 	rateLimitRefillPerSecond int
 	rateLimitRefreshDuration time.Duration
@@ -37,8 +37,8 @@ type visitor struct {
 
 func NewMiddleware(hName string, jwt jwebtoken, refillSpeed int, refreshDur time.Duration) *middleware {
 	res := &middleware{
-		jwt:                jwt,
-		headerName:         hName,
+		jwt:        jwt,
+		headerName: hName,
 
 		rateLimitRefillPerSecond: refillSpeed,
 		rateLimitRefreshDuration: refreshDur,

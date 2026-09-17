@@ -15,7 +15,7 @@ type jwebtoken struct {
 	accessTokenExpirationTime  time.Duration
 	refreshTokenExpirationTime time.Duration
 
-	secret             string
+	secret string
 }
 
 const JWTUserIDKey = "userID"
@@ -87,8 +87,8 @@ func (j *jwebtoken) generateJWT(userID int64, dur time.Duration) (*model.Token, 
 	jti := uuid.String()
 
 	claims := jwt.MapClaims{
-		"exp":                exp,
-		"jti":                jti,
+		"exp":        exp,
+		"jti":        jti,
 		JWTUserIDKey: userID,
 	}
 

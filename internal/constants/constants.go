@@ -2,5 +2,5 @@ package constants
 
 const (
 	JWTContextUserID = "userID"
-	URLIDValue = "id"
+	URLIDValue       = "id"
 )
